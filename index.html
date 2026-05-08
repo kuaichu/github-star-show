@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Star Show</title>
+  <style>
+    :root {
+      --bg: #061018;
+      --bg-deep: #040b11;
+      --panel: rgba(8, 18, 28, 0.9);
+      --panel-strong: rgba(10, 22, 34, 0.98);
+      --panel-soft: rgba(255, 255, 255, 0.03);
+      --line: rgba(94, 247, 197, 0.16);
+      --line-strong: rgba(94, 247, 197, 0.38);
+      --brand: #5ef7c5;
+      --brand-2: #4bc7ff;
+      --warn: #ffd166;
+      --text: #eefafc;
+      --muted: #8ea9b5;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(75, 199, 255, 0.12), transparent 24%),
+        radial-gradient(circle at top right, rgba(94, 247, 197, 0.12), transparent 26%),
+        linear-gradient(180deg, #040a10 0%, #07131c 48%, #03080e 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 24px 24px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent 92%);
+      opacity: 0.45;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 28px 22px;
+      border-right: 1px solid var(--line);
+      background: rgba(3, 10, 15, 0.84);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      background: rgba(94, 247, 197, 0.06);
+      color: var(--brand);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand h1 {
+      margin: 16px 0 10px;
+      font-size: 34px;
+      line-height: 1.05;
+      letter-spacing: 0.02em;
+    }
+
+    .brand h1 span {
+      color: var(--brand);
+      text-shadow: 0 0 18px rgba(94, 247, 197, 0.24);
+    }
+
+    .brand p,
+    .sidebar-copy,
+    .menu-caption,
+    .stat-label,
+    .card-meta,
+    .project-note,
+    .detail-label,
+    .empty p,
+    .footer-note,
+    .toolbar-tip {
+      color: var(--muted);
+    }
+
+    .sidebar-copy {
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+
+    .status-panel,
+    .side-block,
+    .detail-panel,
+    .hero-panel,
+    .stat-card,
+    .card,
+    .toolbar,
+    .empty,
+    .summary-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .status-panel {
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+
+    .status-panel strong {
+      color: var(--brand);
+    }
+
+    .side-block {
+      padding: 14px;
+      margin-bottom: 14px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .side-block h2,
+    .section-title,
+    .detail-panel h3,
+    .summary-card h3 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--brand);
+    }
+
+    .menu-caption {
+      margin-bottom: 10px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .menu-list,
+    .quick-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .menu-item,
+    .quick-item {
+      width: 100%;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      padding: 12px 14px;
+      text-align: left;
+      cursor: pointer;
+      transition: 0.22s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu-item:hover,
+    .menu-item.active,
+    .quick-item:hover,
+    .quick-item.active {
+      border-color: var(--line-strong);
+      background: rgba(94, 247, 197, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .menu-item small,
+    .quick-item small {
+      color: var(--brand);
+      font-size: 12px;
+    }
+
+    .main {
+      padding: 28px;
+    }
+
+    .hero-panel {
+      padding: 26px;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+    }
+
+    .hero-panel::after {
+      content: "";
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      right: -80px;
+      top: -90px;
+      background: radial-gradient(circle, rgba(94, 247, 197, 0.22), transparent 68%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: 46px;
+      line-height: 1.05;
+      max-width: 760px;
+    }
+
+    .hero-title span {
+      color: var(--brand-2);
+    }
+
+    .hero-subtitle {
+      margin: 14px 0 0;
+      max-width: 760px;
+      font-size: 16px;
+      line-height: 1.8;
+      color: #d7edf3;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin: 18px 0;
+    }
+
+    .summary-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(7, 17, 27, 0.94), rgba(6, 12, 19, 0.98));
+    }
+
+    .summary-card p {
+      margin: 0;
+      line-height: 1.7;
+      color: #d5e9ee;
+      font-size: 14px;
+    }
+
+    .toolbar {
+      padding: 18px;
+      border-radius: 22px;
+      margin-bottom: 18px;
+    }
+
+    .toolbar-row {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .input,
+    .select,
+    .button,
+    .ghost-button,
+    .action-link {
+      min-height: 46px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      font: inherit;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      background: rgba(4, 13, 20, 0.94);
+      color: var(--text);
+      padding: 0 14px;
+      outline: none;
+    }
+
+    .button,
+    .ghost-button,
+    .action-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: 0.2s ease;
+      font-weight: 600;
+    }
+
+    .button {
+      background: rgba(94, 247, 197, 0.08);
+      color: var(--brand);
+      border-color: var(--line-strong);
+    }
+
+    .ghost-button,
+    .action-link {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text);
+    }
+
+    .button:hover,
+    .ghost-button:hover,
+    .action-link:hover {
+      border-color: var(--line-strong);
+      box-shadow: 0 0 0 1px rgba(94, 247, 197, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .toolbar-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+
+    .toolbar-tip {
+      line-height: 1.7;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(8, 18, 28, 0.96), rgba(4, 11, 18, 0.96));
+    }
+
+    .stat-label {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--brand);
+    }
+
+    .content-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .content-head h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .content-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border-radius: 24px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(8, 18, 28, 0.96), rgba(4, 11, 18, 0.98));
+      position: relative;
+      overflow: hidden;
+      transition: 0.24s ease;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(94, 247, 197, 0.5), transparent);
+      opacity: 0.85;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: var(--line-strong);
+    }
+
+    .card-head,
+    .detail-row,
+    .meta-row,
+    .chip-row,
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .card-head {
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 12px;
+      color: #d2e8ef;
+    }
+
+    .chip.brand {
+      color: var(--brand);
+      border-color: rgba(94, 247, 197, 0.36);
+    }
+
+    .chip.blue {
+      color: var(--brand-2);
+      border-color: rgba(75, 199, 255, 0.34);
+    }
+
+    .chip.warn {
+      color: var(--warn);
+      border-color: rgba(255, 209, 102, 0.34);
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .card-meta,
+    .detail-text,
+    .list,
+    .project-note,
+    .detail-value {
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .card-description {
+      color: #dbeef2;
+      min-height: 74px;
+      margin: 14px 0;
+      line-height: 1.8;
+    }
+
+    .feature-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #d8eaf0;
+      min-height: 88px;
+    }
+
+    .card-section {
+      padding: 14px;
+      border: 1px solid rgba(94, 247, 197, 0.12);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.02);
+      margin-bottom: 14px;
+    }
+
+    .project-note {
+      margin: 0;
+    }
+
+    .card-actions {
+      margin-top: 16px;
+    }
+
+    .card-actions .button,
+    .card-actions .ghost-button,
+    .detail-actions .button,
+    .detail-actions .ghost-button,
+    .detail-actions .action-link {
+      flex: 1;
+    }
+
+    .empty {
+      padding: 48px 20px;
+      text-align: center;
+      border-radius: 24px;
+    }
+
+    .empty h3 {
+      margin: 0 0 10px;
+      font-size: 24px;
+    }
+
+    .drawer-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.2s ease;
+      z-index: 30;
+      backdrop-filter: blur(8px);
+    }
+
+    .drawer-mask.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: -640px;
+      width: min(640px, 100vw);
+      height: 100vh;
+      padding: 24px;
+      background: rgba(5, 13, 20, 0.98);
+      border-left: 1px solid var(--line);
+      z-index: 31;
+      transition: right 0.26s ease;
+      overflow-y: auto;
+      box-shadow: -30px 0 80px rgba(0, 0, 0, 0.42);
+    }
+
+    .drawer.show {
+      right: 0;
+    }
+
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .drawer-title {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.15;
+    }
+
+    .drawer-subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .close-button {
+      width: 42px;
+      min-width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .detail-panel {
+      padding: 18px;
+      border-radius: 22px;
+      margin-bottom: 14px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .detail-item {
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .detail-label {
+      margin-bottom: 6px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .detail-value {
+      color: #dbeef2;
+    }
+
+    .detail-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 1280px) {
+      .layout {
+        grid-template-columns: 280px 1fr;
+      }
+
+      .toolbar-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .grid,
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .main {
+        padding: 18px;
+      }
+
+      .hero-title {
+        font-size: 34px;
+      }
+
+      .grid,
+      .stats,
+      .detail-grid,
+      .toolbar-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="eyebrow">Archive Recovery Mode</div>
+        <h1>GitHub <span>Star Show</span></h1>
+        <p class="sidebar-copy">把零散收藏重新整理成一个可浏览、可筛选、可继续扩充的项目清单。这个版本不依赖构建工具，打开文件就能直接使用。</p>
+      </div>
+
+      <div class="status-panel">
+        项目状态: <strong>已抢救</strong><br />
+        展示方式: 静态单页仓库导航<br />
+        维护模式: 手动 curated list
+      </div>
+
+      <div class="side-block">
+        <h2>分类导航</h2>
+        <div class="menu-caption">按主题快速切换</div>
+        <div id="categoryMenu" class="menu-list"></div>
+      </div>
+
+      <div class="side-block">
+        <h2>快捷筛选</h2>
+        <div id="quickFilters" class="quick-list"></div>
+      </div>
+
+      <div class="side-block">
+        <h2>项目说明</h2>
+        <div class="toolbar-tip">这个仓库目前最适合做“GitHub 收藏展示页”或“个人开源项目导航页”。如果后续要升级成真实产品，可以再接入 GitHub API、数据文件或自动同步脚本。</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="hero-panel">
+        <div class="eyebrow">Revived Static Project</div>
+        <h2 class="hero-title">让收藏夹不再吃灰，<span>把 Star 变成展示站。</span></h2>
+        <p class="hero-subtitle">我保留了原来偏赛博的视觉气质，但把损坏的编码、残缺的筛选逻辑和不可维护的数据展示方式一起清掉了。现在它是一个可以直接交付、继续补数据也不痛苦的静态页面。</p>
+      </section>
+
+      <section class="summary-grid">
+        <article class="summary-card">
+          <h3>它现在能做什么</h3>
+          <p>按分类、状态、语言和关键词筛选项目，支持快捷筛选、排序、详情抽屉和一键跳转到 GitHub、Demo、文档。</p>
+        </article>
+        <article class="summary-card">
+          <h3>为什么之前会废掉</h3>
+          <p>后半段 HTML 和脚本混入了乱码和断裂标签，页面虽然还能部分显示，但文案、条件判断和详情模板已经不可靠了。</p>
+        </article>
+        <article class="summary-card">
+          <h3>下一步怎么扩展</h3>
+          <p>后续可以把项目数据单独拆成 JSON，或接一个同步脚本自动拉取 Star 列表，这个壳子已经够稳，可以继续长出来。</p>
+        </article>
+      </section>
+
+      <section class="toolbar">
+        <div class="toolbar-row">
+          <input id="searchInput" class="input" type="search" placeholder="搜索项目名、描述、作者、标签..." />
+          <select id="statusFilter" class="select"></select>
+          <select id="languageFilter" class="select"></select>
+          <select id="sortFilter" class="select"></select>
+          <button id="resetBtn" class="button" type="button">重置筛选</button>
+        </div>
+        <div class="toolbar-meta">
+          <div id="activeSummary" class="toolbar-tip">正在查看全部项目。</div>
+          <div class="toolbar-tip">静态页面版本，无需安装依赖，双击打开即可。</div>
+        </div>
+      </section>
+
+      <section id="stats" class="stats"></section>
+
+      <section>
+        <div class="content-head">
+          <div>
+            <h2 id="currentTitle">全部项目</h2>
+            <p id="resultText">共 0 个项目</p>
+          </div>
+        </div>
+        <div id="projectGrid" class="grid"></div>
+      </section>
+
+      <div class="footer-note">提示: 这个版本刻意保持为单文件，方便你后续直接丢到 GitHub Pages 或任何静态托管里。</div>
+    </main>
+  </div>
+
+  <div id="drawerMask" class="drawer-mask"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div class="eyebrow">Project Detail</div>
+        <h2 id="drawerTitle" class="drawer-title">项目详情</h2>
+        <p id="drawerSubtitle" class="drawer-subtitle">这里会显示项目的详细信息。</p>
+      </div>
+      <button id="closeDrawer" class="close-button" type="button" aria-label="关闭">×</button>
+    </div>
+
+    <section class="detail-panel">
+      <h3>概览</h3>
+      <div id="drawerMeta" class="detail-grid"></div>
+    </section>
+
+    <section class="detail-panel">
+      <h3>项目简介</h3>
+      <p id="drawerDescription" class="detail-text"></p>
+    </section>
+
+    <section class="detail-panel">
+      <h3>亮点能力</h3>
+      <ul id="drawerFeatures" class="list feature-list"></ul>
+    </section>
+
+    <section class="detail-panel">
+      <h3>我的备注</h3>
+      <p id="drawerNote" class="detail-text"></p>
+    </section>
+
+    <section class="detail-panel">
+      <h3>标签</h3>
+      <div id="drawerTags" class="chip-row"></div>
+      <div class="detail-actions">
+        <a id="githubLink" class="action-link" href="#" target="_blank" rel="noreferrer">GitHub</a>
+        <a id="demoLink" class="action-link" href="#" target="_blank" rel="noreferrer">Demo</a>
+        <a id="docsLink" class="action-link" href="#" target="_blank" rel="noreferrer">Docs</a>
+      </div>
+    </section>
+  </aside>
+
+  <script>
+    const projects = [
+      {
+        id: 1,
+        name: "OpenWebUI",
+        author: "open-webui",
+        category: "AI / LLM",
+        status: "已部署",
+        language: "TypeScript",
+        stars: 59800,
+        updatedAt: "2026-03-20",
+        recommended: true,
+        description: "一套适合自托管的大模型 Web 界面，支持多模型接入、对话管理和权限控制。",
+        features: ["支持多模型接入", "适合自托管部署", "界面完整可扩展"],
+        tags: ["AI", "LLM", "WebUI", "Docker", "自托管"],
+        github: "https://github.com/open-webui/open-webui",
+        demo: "https://openwebui.com/",
+        docs: "https://docs.openwebui.com/",
+        note: "适合做本地大模型统一入口，后面可以继续接推理服务、RAG 和多用户权限。"
+      },
+      {
+        id: 2,
+        name: "Dify",
+        author: "langgenius",
+        category: "AI / LLM",
+        status: "正在使用",
+        language: "TypeScript",
+        stars: 79000,
+        updatedAt: "2026-03-18",
+        recommended: true,
+        description: "面向 AI 应用编排的平台，适合工作流、知识库、Agent 和应用发布。",
+        features: ["支持工作流编排", "知识库与 Agent", "适合企业应用场景"],
+        tags: ["AI", "Agent", "RAG", "Workflow", "Docker"],
+        github: "https://github.com/langgenius/dify",
+        demo: "https://dify.ai/",
+        docs: "https://docs.dify.ai/",
+        note: "偏平台型，适合做 AI 工具中台，放在推荐区会很有说服力。"
+      },
+      {
+        id: 3,
+        name: "CTFd",
+        author: "CTFd",
+        category: "安全 / CTF",
+        status: "收藏备用",
+        language: "Python",
+        stars: 6200,
+        updatedAt: "2026-03-10",
+        recommended: false,
+        description: "经典的 CTF 比赛平台，适合训练、竞赛和题目管理。",
+        features: ["题目管理完善", "用户与积分体系", "CTF 生态成熟"],
+        tags: ["CTF", "Security", "Python", "Web"],
+        github: "https://github.com/CTFd/CTFd",
+        demo: "https://github.com/CTFd/CTFd",
+        docs: "https://docs.ctfd.io/",
+        note: "如果你以后想整理训练平台，这个项目很适合挂在安全类目里。"
+      },
+      {
+        id: 4,
+        name: "1Panel",
+        author: "1Panel-dev",
+        category: "运维 / 自建服务",
+        status: "已部署",
+        language: "Go",
+        stars: 29000,
+        updatedAt: "2026-03-22",
+        recommended: true,
+        description: "现代化 Linux 服务器管理面板，适合容器、网站、数据库和证书管理。",
+        features: ["服务器管理面板", "应用商店", "适合中小规模自建"],
+        tags: ["运维", "自托管", "Docker", "WebUI", "Linux"],
+        github: "https://github.com/1Panel-dev/1Panel",
+        demo: "https://1panel.cn/",
+        docs: "https://docs.1panel.cn/",
+        note: "很适合作为自建服务总入口，也适合给展示站补一个后台管理联想。"
+      },
+      {
+        id: 5,
+        name: "lucky",
+        author: "gdy666",
+        category: "网络 / NAS / 虚拟化",
+        status: "正在使用",
+        language: "Go",
+        stars: 7800,
+        updatedAt: "2026-03-11",
+        recommended: true,
+        description: "适合家庭网络的端口转发与动态解析工具，适合公网入口和轻量反代。",
+        features: ["轻量入口能力", "家庭网络友好", "适合 NAS 场景"],
+        tags: ["网络", "NAS", "反向代理", "家庭网络"],
+        github: "https://github.com/gdy666/lucky",
+        demo: "https://github.com/gdy666/lucky",
+        docs: "https://github.com/gdy666/lucky#readme",
+        note: "和家庭网络场景契合度很高，适合做个人精选收藏。"
+      },
+      {
+        id: 6,
+        name: "Home Assistant",
+        author: "home-assistant",
+        category: "自动化 / 效率工具",
+        status: "待研究",
+        language: "Python",
+        stars: 76000,
+        updatedAt: "2026-03-14",
+        recommended: false,
+        description: "成熟的家庭自动化平台，能整合设备、规则引擎和可视化面板。",
+        features: ["自动化规则强", "生态极丰富", "适合统一设备管理"],
+        tags: ["自动化", "IoT", "Python", "Dashboard"],
+        github: "https://github.com/home-assistant/core",
+        demo: "https://www.home-assistant.io/",
+        docs: "https://www.home-assistant.io/",
+        note: "更偏平台型，后面如果加专题页，这个项目值得单独深挖。"
+      },
+      {
+        id: 8,
+        name: "Vue Element Admin",
+        author: "PanJiaChen",
+        category: "前端 UI / 可视化",
+        status: "收藏备用",
+        language: "JavaScript",
+        stars: 89000,
+        updatedAt: "2026-03-01",
+        recommended: false,
+        description: "经典后台模板项目，适合快速搭建管理后台与权限系统。",
+        features: ["后台模板成熟", "结构清晰", "适合中后台项目"],
+        tags: ["Vue", "Admin", "Dashboard", "Frontend"],
+        github: "https://github.com/PanJiaChen/vue-element-admin",
+        demo: "https://panjiachen.github.io/vue-element-admin-dashboard/",
+        docs: "https://panjiachen.gitee.io/vue-element-admin-document/",
+        note: "如果你后面还要做后台整理页，这类项目可以直接借鉴表格、权限和布局。"
+      },
+      {
+        id: 9,
+        name: "Jellyfin",
+        author: "jellyfin",
+        category: "媒体 / 下载 / 图床",
+        status: "待研究",
+        language: "C#",
+        stars: 41000,
+        updatedAt: "2026-03-09",
+        recommended: false,
+        description: "自托管媒体服务器，适合影音库、转码和统一播放管理。",
+        features: ["媒体库管理", "多端播放", "自托管生态成熟"],
+        tags: ["媒体", "自托管", "影音", "NAS"],
+        github: "https://github.com/jellyfin/jellyfin",
+        demo: "https://jellyfin.org/",
+        docs: "https://jellyfin.org/docs/",
+        note: "适合放在媒体大类里，后续可以继续加是否适合 NAS、是否需要硬解这些字段。"
+      }
+    ];
+
+    const categoryOrder = [
+      "全部项目",
+      "AI / LLM",
+      "安全 / CTF",
+      "运维 / 自建服务",
+      "前端 UI / 可视化",
+      "网络 / NAS / 虚拟化",
+      "媒体 / 下载 / 图床",
+      "自动化 / 效率工具"
+    ];
+
+    const quickFilters = [
+      { key: "recommended", label: "优先推荐", badge: "HOT" },
+      { key: "deployed", label: "已部署", badge: "RUN" },
+      { key: "using", label: "正在使用", badge: "LIVE" },
+      { key: "research", label: "待研究", badge: "TODO" }
+    ];
+
+    const statusOptions = ["全部状态", "已部署", "正在使用", "待研究", "收藏备用"];
+    const languageOptions = ["全部语言", ...new Set(projects.map(item => item.language))];
+    const sortOptions = [
+      { value: "stars-desc", label: "按 Star 从高到低" },
+      { value: "stars-asc", label: "按 Star 从低到高" },
+      { value: "updated-desc", label: "按更新时间从新到旧" },
+      { value: "name-asc", label: "按名称排序" }
+    ];
+
+    const state = {
+      category: "全部项目",
+      keyword: "",
+      status: "全部状态",
+      language: "全部语言",
+      quick: "",
+      sort: "stars-desc"
+    };
+
+    const els = {
+      categoryMenu: document.getElementById("categoryMenu"),
+      quickFilters: document.getElementById("quickFilters"),
+      searchInput: document.getElementById("searchInput"),
+      statusFilter: document.getElementById("statusFilter"),
+      languageFilter: document.getElementById("languageFilter"),
+      sortFilter: document.getElementById("sortFilter"),
+      resetBtn: document.getElementById("resetBtn"),
+      stats: document.getElementById("stats"),
+      currentTitle: document.getElementById("currentTitle"),
+      resultText: document.getElementById("resultText"),
+      projectGrid: document.getElementById("projectGrid"),
+      activeSummary: document.getElementById("activeSummary"),
+      drawer: document.getElementById("drawer"),
+      drawerMask: document.getElementById("drawerMask"),
+      closeDrawer: document.getElementById("closeDrawer"),
+      drawerTitle: document.getElementById("drawerTitle"),
+      drawerSubtitle: document.getElementById("drawerSubtitle"),
+      drawerMeta: document.getElementById("drawerMeta"),
+      drawerDescription: document.getElementById("drawerDescription"),
+      drawerFeatures: document.getElementById("drawerFeatures"),
+      drawerNote: document.getElementById("drawerNote"),
+      drawerTags: document.getElementById("drawerTags"),
+      githubLink: document.getElementById("githubLink"),
+      demoLink: document.getElementById("demoLink"),
+      docsLink: document.getElementById("docsLink")
+    };
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" }).format(date);
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("en-US").format(value);
+    }
+
+    function createSelectOptions(selectEl, options, mapper) {
+      selectEl.innerHTML = options.map(option => {
+        const config = mapper(option);
+        return `<option value="${config.value}">${config.label}</option>`;
+      }).join("");
+    }
+
+    function renderFilters() {
+      els.categoryMenu.innerHTML = categoryOrder.map(category => {
+        const count = category === "全部项目"
+          ? projects.length
+          : projects.filter(item => item.category === category).length;
+        const activeClass = state.category === category ? "active" : "";
+        return `<button class="menu-item ${activeClass}" type="button" data-category="${category}"><span>${category}</span><small>${count}</small></button>`;
+      }).join("");
+
+      els.quickFilters.innerHTML = quickFilters.map(item => {
+        const activeClass = state.quick === item.key ? "active" : "";
+        return `<button class="quick-item ${activeClass}" type="button" data-quick="${item.key}"><span>${item.label}</span><small>${item.badge}</small></button>`;
+      }).join("");
+
+      createSelectOptions(els.statusFilter, statusOptions, option => ({ value: option, label: option }));
+      createSelectOptions(els.languageFilter, languageOptions, option => ({ value: option, label: option }));
+      createSelectOptions(els.sortFilter, sortOptions, option => option);
+
+      els.statusFilter.value = state.status;
+      els.languageFilter.value = state.language;
+      els.sortFilter.value = state.sort;
+    }
+
+    function getFilteredProjects() {
+      const keyword = state.keyword.trim().toLowerCase();
+      const filtered = projects.filter(item => {
+        const matchCategory = state.category === "全部项目" || item.category === state.category;
+        const matchStatus = state.status === "全部状态" || item.status === state.status;
+        const matchLanguage = state.language === "全部语言" || item.language === state.language;
+        const searchBase = [item.name, item.author, item.description, item.tags.join(" ")].join(" ").toLowerCase();
+        const matchKeyword = !keyword || searchBase.includes(keyword);
+
+        let matchQuick = true;
+        if (state.quick === "recommended") matchQuick = item.recommended;
+        if (state.quick === "deployed") matchQuick = item.status === "已部署";
+        if (state.quick === "using") matchQuick = item.status === "正在使用";
+        if (state.quick === "research") matchQuick = item.status === "待研究";
+
+        return matchCategory && matchStatus && matchLanguage && matchKeyword && matchQuick;
+      });
+
+      filtered.sort((a, b) => {
+        if (state.sort === "stars-desc") return b.stars - a.stars;
+        if (state.sort === "stars-asc") return a.stars - b.stars;
+        if (state.sort === "updated-desc") return new Date(b.updatedAt) - new Date(a.updatedAt);
+        return a.name.localeCompare(b.name);
+      });
+
+      return filtered;
+    }
+
+    function renderStats(list) {
+      const stats = [
+        { label: "项目总数", value: projects.length },
+        { label: "当前筛中", value: list.length },
+        { label: "推荐项目", value: projects.filter(item => item.recommended).length },
+        { label: "已部署或在用", value: projects.filter(item => ["已部署", "正在使用"].includes(item.status)).length }
+      ];
+
+      els.stats.innerHTML = stats.map(item => `<article class="stat-card"><div class="stat-label">${item.label}</div><div class="stat-value">${item.value}</div></article>`).join("");
+    }
+
+    function buildSummaryText(list) {
+      const parts = [];
+      if (state.category !== "全部项目") parts.push(`分类「${state.category}」`);
+      if (state.status !== "全部状态") parts.push(`状态「${state.status}」`);
+      if (state.language !== "全部语言") parts.push(`语言「${state.language}」`);
+      if (state.quick) {
+        const quick = quickFilters.find(item => item.key === state.quick);
+        if (quick) parts.push(`快捷筛选「${quick.label}」`);
+      }
+      if (state.keyword) parts.push(`关键词「${state.keyword}」`);
+      const head = parts.length ? `当前条件: ${parts.join(" / ")}。` : "当前条件: 全部项目。";
+      return `${head} 共找到 ${list.length} 个结果。`;
+    }
+
+    function renderProjects(list) {
+      const titleMap = {
+        recommended: "优先推荐",
+        deployed: "已部署项目",
+        using: "正在使用",
+        research: "待研究项目"
+      };
+
+      els.currentTitle.textContent = state.quick ? titleMap[state.quick] : state.category;
+      els.resultText.textContent = `共 ${list.length} 个项目`;
+      els.activeSummary.textContent = buildSummaryText(list);
+
+      if (!list.length) {
+        els.projectGrid.innerHTML = `<div class="empty"><h3>没有匹配结果</h3><p>可以试试缩短关键词，或者先重置筛选条件。</p></div>`;
+        return;
+      }
+
+      els.projectGrid.innerHTML = list.map(item => `
+        <article class="card">
+          <div class="card-head">
+            <div class="chip-row">
+              <span class="chip brand">${item.category}</span>
+              <span class="chip blue">${item.language}</span>
+              ${item.recommended ? `<span class="chip warn">推荐</span>` : ""}
+            </div>
+            <span class="card-meta">更新于 ${formatDate(item.updatedAt)}</span>
+          </div>
+          <h3>${item.name}</h3>
+          <div class="card-meta">@${item.author} · ${item.status} · ★ ${formatNumber(item.stars)}</div>
+          <p class="card-description">${item.description}</p>
+          <div class="card-section">
+            <ul class="feature-list">${item.features.map(feature => `<li>${feature}</li>`).join("")}</ul>
+          </div>
+          <div class="card-section">
+            <p class="project-note">${item.note}</p>
+          </div>
+          <div class="chip-row">${item.tags.map(tag => `<span class="chip">${tag}</span>`).join("")}</div>
+          <div class="card-actions">
+            <button class="ghost-button" type="button" data-detail="${item.id}">查看详情</button>
+            <a class="button" href="${item.github}" target="_blank" rel="noreferrer">打开 GitHub</a>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function bindDynamicEvents() {
+      document.querySelectorAll("[data-category]").forEach(button => {
+        button.onclick = () => {
+          state.category = button.dataset.category;
+          state.quick = "";
+          renderAll();
+        };
+      });
+
+      document.querySelectorAll("[data-quick]").forEach(button => {
+        button.onclick = () => {
+          state.quick = state.quick === button.dataset.quick ? "" : button.dataset.quick;
+          renderAll();
+        };
+      });
+
+      document.querySelectorAll("[data-detail]").forEach(button => {
+        button.onclick = () => openDetail(Number(button.dataset.detail));
+      });
+    }
+
+    function renderAll() {
+      renderFilters();
+      const list = getFilteredProjects();
+      renderStats(list);
+      renderProjects(list);
+      bindDynamicEvents();
+    }
+
+    function openDetail(id) {
+      const item = projects.find(project => project.id === id);
+      if (!item) return;
+
+      els.drawerTitle.textContent = item.name;
+      els.drawerSubtitle.textContent = `@${item.author} · ${item.category} · ${item.status}`;
+      els.drawerDescription.textContent = item.description;
+      els.drawerFeatures.innerHTML = item.features.map(feature => `<li>${feature}</li>`).join("");
+      els.drawerNote.textContent = item.note;
+      els.drawerTags.innerHTML = item.tags.map(tag => `<span class="chip">${tag}</span>`).join("");
+      els.drawerMeta.innerHTML = [
+        { label: "分类", value: item.category },
+        { label: "状态", value: item.status },
+        { label: "语言", value: item.language },
+        { label: "Stars", value: formatNumber(item.stars) },
+        { label: "更新时间", value: formatDate(item.updatedAt) },
+        { label: "是否推荐", value: item.recommended ? "是" : "否" }
+      ].map(entry => `<div class="detail-item"><div class="detail-label">${entry.label}</div><div class="detail-value">${entry.value}</div></div>`).join("");
+
+      els.githubLink.href = item.github;
+      els.demoLink.href = item.demo;
+      els.docsLink.href = item.docs;
+      els.drawer.classList.add("show");
+      els.drawerMask.classList.add("show");
+      els.drawer.setAttribute("aria-hidden", "false");
+    }
+
+    function closeDetail() {
+      els.drawer.classList.remove("show");
+      els.drawerMask.classList.remove("show");
+      els.drawer.setAttribute("aria-hidden", "true");
+    }
+
+    els.searchInput.addEventListener("input", event => {
+      state.keyword = event.target.value;
+      renderAll();
+    });
+
+    els.statusFilter.addEventListener("change", event => {
+      state.status = event.target.value;
+      renderAll();
+    });
+
+    els.languageFilter.addEventListener("change", event => {
+      state.language = event.target.value;
+      renderAll();
+    });
+
+    els.sortFilter.addEventListener("change", event => {
+      state.sort = event.target.value;
+      renderAll();
+    });
+
+    els.resetBtn.addEventListener("click", () => {
+      state.category = "全部项目";
+      state.keyword = "";
+      state.status = "全部状态";
+      state.language = "全部语言";
+      state.quick = "";
+      state.sort = "stars-desc";
+      els.searchInput.value = "";
+      renderAll();
+    });
+
+    els.closeDrawer.addEventListener("click", closeDetail);
+    els.drawerMask.addEventListener("click", closeDetail);
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeDetail();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
