@@ -1,212 +1,160 @@
 # GitHub Star Show
 
-一个把 GitHub Star 同步成本地个人项目库的网站。
+Turn GitHub Stars into a maintainable personal open-source library.
 
-它不只是展示 Star 列表，而是把你收藏过的仓库同步到自己的系统里，支持分类、筛选、编辑、导入、同步记录，以及后续可选的 AI 分类增强。
+`GitHub Star Show` is a self-hostable web app that lets users sign in with GitHub, sync their starred repositories, organize them into a personal project library, and keep that library separated by user account instead of showing one shared demo list.
 
-## 项目定位
+## Live Demo
 
-这个项目现在更接近一个“个人开源项目收藏库”，而不是单纯的 GitHub Star 镜像页。
+- Demo site: [https://stars.yeque.top](https://stars.yeque.top)
+- Frontend: Cloudflare Pages
+- Backend: self-hosted Express + Prisma service
 
-核心思路是：
+## What It Does
 
-- 用户使用 GitHub 登录
-- 后端读取当前用户的 GitHub Stars
-- 把 Star 同步到本地数据库
-- 为每个用户建立自己的项目库视图
-- 支持在本地继续整理这些项目
+- Sign in with GitHub OAuth
+- Sync each user's own starred repositories
+- Persist user-specific project libraries in the database
+- Organize projects with rule-based categories
+- Track remote states such as `unstarred`, `archived`, and `missing`
+- Edit notes, status, links, and user-level metadata in an admin panel
+- Support incremental sync and manual full re-sync
+- Keep AI classification optional instead of making it a hard dependency
 
-## 当前已实现功能
+## Product Positioning
 
-### 1. GitHub 登录
+This project is not trying to replace GitHub, Notion, or a generic bookmark manager.
 
-- 支持 GitHub OAuth 登录
-- 登录成功后会创建本地用户
-- 会保存 GitHub 账号关联关系
-- 会创建数据库 session，而不是只存在内存里
+It is focused on one workflow:
 
-### 2. GitHub Star 同步
+1. Use GitHub Stars as the collection entry point
+2. Sync repositories into your own system
+3. Continue organizing them as a long-lived personal open-source library
 
-- 支持把当前登录用户的 GitHub Stars 同步到本地
-- 首次同步默认执行全量同步
-- 后续同步默认执行增量同步
-- 支持手动触发全量重同步
-- 会记录最近同步时间
-- 会记录最近几次同步历史
+The key idea is:
 
-### 3. 用户项目库
+> GitHub Stars should not disappear into a long list. They should become a library you can maintain.
 
-- 同一个 GitHub 仓库可以存在于全局 `projects` 主表
-- 用户和项目之间通过 `user_projects` 建立关系
-- 每个用户看到的是自己的项目库，而不是固定演示数据
-- 用户项目编辑结果会持久化，刷新页面或重启后端后不会丢失
+## Current Capabilities
 
-### 4. 项目展示页
+### Authentication
 
-- 首页展示当前用户的项目卡片
-- 支持项目详情抽屉
-- 支持分类导航
-- 支持快速过滤
-- 支持统计卡片
-- 支持项目标签、语言、更新时间、备注等展示
+- GitHub OAuth login
+- Persistent database-backed sessions
+- User/account binding through `users`, `github_accounts`, and `sessions`
 
-### 5. 管理台
+### Sync
 
-- 支持查看项目列表
-- 支持编辑项目信息
-- 支持删除当前用户与项目的关系
-- 支持新建本地项目
-- 支持通过 `owner/repo` 导入单个 GitHub 仓库
+- First sync runs in full mode
+- Later syncs default to incremental mode
+- Manual full re-sync remains available
+- Recent sync runs and last sync time are stored
 
-### 6. 分类系统
+### User Library
 
-- 默认启用规则分类
-- 会基于仓库名、描述、语言、topics 进行分类
-- 当前分类包括：
+- User data is isolated by account
+- Shared repository metadata is stored globally
+- User-level overrides are stored separately
+- The same repository can appear in multiple users' libraries without mixing notes or categories
+
+### Classification
+
+- Rule-based categorization is enabled by default
+- Uses repository name, description, language, and topics
+- Categories currently include:
   - `AI / LLM`
-  - `运维 / 自建服务`
-  - `网络 / NAS / 虚拟化`
-  - `媒体 / 下载 / 图床`
-  - `安全 / CTF`
-  - `前端 UI / 可视化`
-  - `自动化 / 效率工具`
-  - `未分类 / 待整理`
+  - `Automation / Productivity`
+  - `Frontend UI / Visualization`
+  - `Media / Download / Image Hosting`
+  - `Network / NAS / Virtualization`
+  - `Ops / Self-hosted Services`
+  - `Security / CTF`
+  - `Uncategorized / Review`
 
-### 7. AI 分类能力
+### Remote State Tracking
 
-AI 分类已经预留为可选增强能力，但默认不依赖它。
+- `active`
+- `unstarred`
+- `archived`
+- `missing`
 
-当前策略是：
+These states are kept as user-level sync facts, so the app can preserve local notes and categorization even when the remote GitHub state changes.
 
-- 规则分类始终可用
-- 不配置 AI key，项目也能完整运行
-- 配置后可以手动触发 AI 分类
-- 适合后续开源场景，不强绑作者自己的 API
+### Admin
 
-## 技术栈
+- Create local projects
+- Edit category, note, links, status, tags, and features
+- Import a single repository by `owner/repo`
+- Remove a project from the local library
+- Optionally unstar it on GitHub during deletion
 
-### 前端
+## Tech Stack
+
+### Frontend
 
 - Vue 3
 - Vite
-- 原生 CSS
+- Plain CSS
 
-### 后端
+### Backend
 
 - Express
 - Prisma
 - SQLite
 
-## 项目结构
+## Architecture Summary
 
-```text
-GithubStarShow/
-├─ frontend/                  前端应用（Vue + Vite）
-├─ backend/                   后端服务（Express + Prisma）
-├─ index.html                 早期静态原型保留文件
-└─ README.md
-```
-
-## 数据模型
-
-当前数据库核心结构：
-
-- `User`
-  - 本地用户
-  - 保存 GitHub 登录用户的基础资料
-
-- `GithubAccount`
-  - GitHub 账号绑定关系
-  - 保存 GitHub 用户 ID、login、token 等
-
-- `Session`
-  - 登录 session
-  - 用于持久化登录态
+The data model intentionally separates shared repository metadata from user-specific organization:
 
 - `Project`
-  - 全局项目主表
-  - 以 GitHub 仓库为中心保存标准信息
+  - Global repository record
+  - One shared source of truth for repo metadata
 
 - `UserProject`
-  - 用户与项目关系表
-  - 保存用户自己的分类、状态、备注、标签等覆盖信息
+  - Per-user relationship to a project
+  - Stores category, note, status, tags, feature overrides, remote state, and sync timestamps
+
+- `User`
+  - Local application user
+
+- `GithubAccount`
+  - GitHub identity, token, scope, and profile mapping
+
+- `Session`
+  - Persistent login session
 
 - `SyncRun`
-  - 同步记录表
-  - 保存同步来源、同步数量、同步时间
+  - Sync history for status tracking
 
-## 同步逻辑说明
+This lets multiple users share repository records while keeping their own library curation separate.
 
-### 首次同步
+## Screenshots
 
-- 用户第一次同步时执行全量同步
-- 会读取当前用户所有 GitHub Stars
-- 写入 `projects`
-- 同时为当前用户写入 `user_projects`
+Recommended screenshots to place here for the public repository:
 
-### 后续同步
+- Guest homepage
+- Signed-in homepage after sync
+- Admin panel
+- Project detail drawer with README preview
 
-- 默认执行增量同步
-- 以当前用户项目库里最新的 `starredAt` 作为边界
-- 只拉取这之后新增的 Star
-- 减少不必要的全量重复处理
+Suggested folder:
 
-### 全量重同步
+```text
+docs/screenshots/
+```
 
-- 用户仍可以手动执行全量同步
-- 适合修复分类、补齐老数据、或做兜底校验
+Suggested README image blocks after you export screenshots:
 
-### 当前同步限制
+```md
+![Guest homepage](docs/screenshots/guest-home.png)
+![Signed-in dashboard](docs/screenshots/user-dashboard.png)
+![Admin panel](docs/screenshots/admin-panel.png)
+![Project details](docs/screenshots/project-detail.png)
+```
 
-这版还没有做的一点是：
+## Local Development
 
-- GitHub 上已经取消 Star 的仓库，不会在全量同步时自动从用户项目库里移除
-
-这可以作为后续优化项继续补。
-
-## 当前后端接口
-
-### 基础接口
-
-- `GET /api/health`
-- `GET /api/meta`
-
-### 项目接口
-
-- `GET /api/projects`
-- `GET /api/projects/:id`
-- `POST /api/projects`
-- `PATCH /api/projects/:id`
-- `DELETE /api/projects/:id`
-
-### GitHub 导入
-
-- `POST /api/github/import-repo`
-
-### 认证接口
-
-- `GET /auth/github/login`
-- `GET /auth/github/callback`
-- `GET /auth/me`
-- `POST /auth/logout`
-
-### 同步接口
-
-- `POST /api/sync/github-stars`
-- `GET /api/sync/me/projects`
-- `GET /api/sync/me/status`
-- `POST /api/sync/reclassify-rules`
-
-### AI 相关接口
-
-- `GET /api/sync/ai-config`
-- `POST /api/sync/ai-classify`
-
-## 本地启动
-
-### 1. 安装依赖
-
-前后端分别安装：
+### 1. Install dependencies
 
 ```bash
 cd backend
@@ -218,9 +166,11 @@ cd frontend
 npm install
 ```
 
-### 2. 配置后端环境变量
+### 2. Configure backend environment
 
-在 `backend` 目录下创建 `.env`，可以参考下面这份：
+Create `backend/.env` from `backend/.env.example`.
+
+Example local configuration:
 
 ```env
 DATABASE_URL="file:./dev.db"
@@ -229,7 +179,6 @@ CLIENT_ORIGIN="http://localhost:5173"
 APP_BASE_URL="http://localhost:5173"
 BACKEND_BASE_URL="http://localhost:3000"
 
-GITHUB_TOKEN=""
 GITHUB_API_BASE_URL="https://api.github.com"
 GITHUB_CLIENT_ID=""
 GITHUB_CLIENT_SECRET=""
@@ -242,111 +191,104 @@ AI_CLASSIFICATION_MAX_PER_RUN="25"
 AI_CLASSIFICATION_INCLUDE_README="false"
 ```
 
-### 3. 初始化数据库
-
-如果是第一次启动，先在 `backend` 目录执行：
+### 3. Initialize the database
 
 ```bash
+cd backend
 npx prisma generate
 npx prisma db push
 ```
 
-### 4. 启动后端
+### 4. Start the backend
 
 ```bash
 cd backend
 npm run dev
 ```
 
-默认地址：
-
-- [http://localhost:3000](http://localhost:3000)
-
-### 5. 启动前端
+### 5. Start the frontend
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-默认地址：
+## Deployment
 
-- [http://localhost:5173](http://localhost:5173)
+This repository is currently deployed as:
 
-## GitHub OAuth 配置
+- Frontend: Cloudflare Pages
+- Frontend domain: `https://stars.yeque.top`
+- Backend: self-hosted on 1Panel
+- Backend base path: `https://api.yeque.top:9000/githubstarshow`
 
-如果要启用真实 GitHub 登录和 Star 同步，需要创建一个 GitHub OAuth App。
+### Frontend environment variables
 
-推荐配置：
+Set these in Cloudflare Pages:
+
+```env
+VITE_API_BASE_URL=https://api.yeque.top:9000/githubstarshow/api
+VITE_AUTH_BASE_URL=https://api.yeque.top:9000/githubstarshow/auth
+```
+
+### Backend environment variables
+
+Example production shape:
+
+```env
+DATABASE_URL="file:./data/dev.db"
+PORT=3000
+
+CLIENT_ORIGIN="https://stars.yeque.top"
+APP_BASE_URL="https://stars.yeque.top"
+BACKEND_BASE_URL="https://api.yeque.top:9000/githubstarshow"
+
+GITHUB_API_BASE_URL="https://api.github.com"
+GITHUB_CLIENT_ID="your-client-id"
+GITHUB_CLIENT_SECRET="your-client-secret"
+
+OPENAI_API_KEY=""
+OPENAI_API_BASE_URL="https://api.openai.com/v1"
+OPENAI_MODEL="gpt-4o-mini"
+AI_CLASSIFICATION_ENABLED="false"
+AI_CLASSIFICATION_MAX_PER_RUN="25"
+AI_CLASSIFICATION_INCLUDE_README="false"
+```
+
+### Reverse proxy routing
+
+If you deploy behind a shared API gateway, make sure:
+
+- `/githubstarshow/api/*` is forwarded to `/api/*`
+- `/githubstarshow/auth/*` is forwarded to `/auth/*`
+
+The `/githubstarshow` prefix should be removed before the request reaches Express.
+
+### GitHub OAuth
+
+Recommended GitHub OAuth App settings for the current demo:
 
 - Homepage URL:
-  - `http://localhost:5173`
+  - `https://stars.yeque.top`
 - Authorization callback URL:
-  - `http://localhost:3000/auth/github/callback`
+  - `https://api.yeque.top:9000/githubstarshow/auth/github/callback`
 
-然后把以下变量写入 `backend/.env`：
+## Known Limits
 
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
+- No automated weekly full re-sync scheduler yet
+- No test suite yet
+- AI classification is optional and disabled by default
+- README screenshots are still waiting for final exported images
 
-## 适合开源的使用方式
+## Release Status
 
-这个项目现在采用“规则优先，AI 可选”的思路，比较适合开源：
+Recommended first public tag:
 
-- 不配置 AI，也可以完整使用
-- 规则分类是默认主路径
-- AI 只是辅助增强
-- 后续部署者可以自己决定是否配置 AI key
+- `v0.1.0-beta.1`
 
-## 当前已知待完善点
+Why this version:
 
-除了 AI 之外，比较值得继续做的功能有：
-
-### 1. 同步体系继续完善
-
-- 全量同步时自动处理已取消 Star 的项目
-- 更细的同步日志
-- 同步进度提示
-- 同步失败记录
-
-### 2. 管理台增强
-
-- 批量编辑
-- 批量分类
-- 批量删除用户项目关系
-- 手工锁定分类
-
-### 3. 规则分类增强
-
-- 扩充关键词字典
-- 增加优先级控制
-- 增加排除词
-- 降低“未分类 / 待整理”的占比
-
-### 4. 项目库能力增强
-
-- 置顶 / Pin
-- 导出 Markdown / JSON / CSV
-- 公共分享页
-- 更完善的个人备注系统
-
-### 5. 工程化补足
-
-- 增加测试
-- 增加错误边界处理
-- 补充部署文档
-- 补充开源说明
-
-## 当前产品状态总结
-
-这版已经不是单纯 demo，而是一个能跑通核心业务链路的产品雏形：
-
-- GitHub 登录可用
-- 用户 Star 同步可用
-- 用户数据持久化可用
-- 规则分类可用
-- 管理台编辑可用
-- 增量同步已接入
-- AI 为可选增强，不是刚需依赖
-
-如果你准备继续把它往 GitHub 开源项目方向推进，这个基础已经是成立的。
+- Core login + sync + persistence flow is working
+- Multi-user isolation is in place
+- The app is already usable as a real demo
+- There is still room to improve tests, scheduler automation, and polish
