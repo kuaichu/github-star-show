@@ -52,6 +52,7 @@
             @delete="removeProject"
             @import-repo="runGithubImport"
             @reset="resetDraft"
+            @cancel-create="cancelCreateProject"
             @update:import-repo="importRepo = $event"
             @update:features-text="featuresText = $event"
             @update:tags-text="tagsText = $event"
@@ -313,6 +314,7 @@ const aiClassificationConfig = ref({ enabled: false, model: "", maxPerRun: 25, i
 const classifyingAi = ref(false);
 const syncStatus = ref({ lastStarSyncAt: null, recentRuns: [] });
 const selectedProjectId = ref(null);
+const previousSelectedProjectId = ref(null);
 const featuresText = ref("");
 const tagsText = ref("");
 const currentPage = ref(1);
@@ -376,7 +378,13 @@ const localizedQuickFilters = computed(() =>
 
 const sidebarCategories = computed(() => {
   const projectCategories = [...new Set(projects.value.map(item => item.category).filter(Boolean))];
-  return [ALL_PROJECTS, ...projectCategories];
+  const defaultCategories = (categories.value || []).filter(item => item && item !== ALL_PROJECTS);
+  const orderedDefaults = defaultCategories.filter(item => projectCategories.includes(item));
+  const customCategories = projectCategories
+    .filter(item => !defaultCategories.includes(item))
+    .sort((left, right) => left.localeCompare(right, locale.value));
+
+  return [ALL_PROJECTS, ...orderedDefaults, ...customCategories];
 });
 
 const sidebarCategoryCounts = computed(() => {
@@ -629,20 +637,43 @@ function openAdmin() {
 }
 
 function closeAdmin() {
+  if (!selectedProjectId.value) {
+    cancelCreateProject();
+  }
   adminMode.value = false;
   adminMessage.value = "";
   importMessage.value = "";
 }
 
 function startCreateProject() {
+  previousSelectedProjectId.value = selectedProjectId.value;
   selectedProjectId.value = null;
   adminMessage.value = "";
   importMessage.value = "";
   syncDraft(null);
 }
 
+function cancelCreateProject() {
+  const fallbackId = previousSelectedProjectId.value && projects.value.some(item => item.id === previousSelectedProjectId.value)
+    ? previousSelectedProjectId.value
+    : projects.value[0]?.id || null;
+
+  selectedProjectId.value = fallbackId;
+  adminMessage.value = "";
+  importMessage.value = "";
+
+  if (fallbackId) {
+    const project = projects.value.find(item => item.id === fallbackId);
+    syncDraft(project);
+    return;
+  }
+
+  syncDraft(null);
+}
+
 function selectProjectForEdit(id) {
   selectedProjectId.value = id;
+  previousSelectedProjectId.value = id;
   adminMessage.value = "";
   const project = projects.value.find(item => item.id === id);
   syncDraft(project);
@@ -662,6 +693,7 @@ async function saveProject() {
     } else {
       const created = await createProject(payload);
       selectedProjectId.value = created.id;
+      previousSelectedProjectId.value = created.id;
       adminMessage.value = uiMessage(`已创建：${created.name}`, `Created: ${created.name}`);
     }
 
@@ -715,6 +747,7 @@ async function runGithubImport() {
     const result = await importGithubRepo({ repo: importRepo.value });
     importMessage.value = uiMessage(`已导入：${result.project.name}`, `Imported: ${result.project.name}`);
     selectedProjectId.value = result.project.id;
+    previousSelectedProjectId.value = result.project.id;
     await loadMeta();
     await loadProjects();
     selectProjectForEdit(result.project.id);

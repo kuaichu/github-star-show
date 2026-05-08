@@ -67,6 +67,14 @@
           <div class="admin-editor-head">
             <h3>{{ isCreateMode ? t("admin.createProject") : t("admin.editProject") }}</h3>
             <button
+              v-if="isCreateMode"
+              class="ghost-button"
+              type="button"
+              @click="$emit('cancel-create')"
+            >
+              {{ cancelCreateLabel }}
+            </button>
+            <button
               v-if="!isCreateMode && selectedProject"
               class="danger-button"
               type="button"
@@ -95,7 +103,16 @@
             </label>
             <label>
               <span>{{ t("admin.category") }}</span>
-              <input v-model="draft.category" class="input" type="text" />
+              <input
+                v-model="draft.category"
+                class="input"
+                type="text"
+                list="admin-category-options"
+              />
+              <small class="field-help">{{ categoryFieldHelp }}</small>
+              <datalist id="admin-category-options">
+                <option v-for="category in categoryOptions" :key="category" :value="category" />
+              </datalist>
             </label>
             <label>
               <span>{{ t("admin.fields.status") }}</span>
@@ -191,7 +208,7 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import { t, translateCategory, translateStatus } from "../i18n";
+import { locale, t, translateCategory, translateStatus } from "../i18n";
 
 const props = defineProps({
   projects: { type: Array, default: () => [] },
@@ -214,6 +231,7 @@ const emit = defineEmits([
   "select",
   "save",
   "delete",
+  "cancel-create",
   "reset",
   "import-repo",
   "update:features-text",
@@ -229,6 +247,16 @@ const adminCategoryFilter = ref(ADMIN_ALL_CATEGORIES);
 
 const editorKey = computed(() => (props.selectedProject?.id ? `project-${props.selectedProject.id}` : "create-project"));
 const categoryOptions = computed(() => props.categories.filter(item => item && item !== "全部项目"));
+const categoryFieldHelp = computed(() =>
+  locale.value === "zh-CN"
+    ? "可直接输入自定义分类，也可以从现有分类中选择。"
+    : "Type a custom category directly or pick one of the existing categories."
+);
+
+const cancelCreateLabel = computed(() =>
+  locale.value === "zh-CN" ? "退出新建" : "Exit Create Mode"
+);
+
 const filteredProjects = computed(() => {
   if (adminCategoryFilter.value === ADMIN_ALL_CATEGORIES) {
     return props.projects;

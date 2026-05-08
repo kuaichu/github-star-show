@@ -1304,6 +1304,12 @@ body::after {
   font-size: 14px;
 }
 
+.field-help {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .admin-form label.full {
   grid-column: 1 / -1;
 }
