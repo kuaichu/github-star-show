@@ -50,6 +50,8 @@ function mergeUserProject(project, overrides = {}) {
   return {
     ...normalizedProject,
     category: overrides.category || normalizedProject.category,
+    categorySource: overrides.categorySource || normalizedProject.categorySource || "manual",
+    categoryReason: overrides.categoryReason || normalizedProject.categoryReason || "manual:legacy-data",
     status: overrides.status || normalizedProject.status,
     recommended: overrides.recommended ?? normalizedProject.recommended,
     note: overrides.note || normalizedProject.note,
@@ -68,6 +70,8 @@ function mergeUserProject(project, overrides = {}) {
 function mergePersistedUserProject(record) {
   return mergeUserProject(record.project, {
     category: record.category,
+    categorySource: record.categorySource,
+    categoryReason: record.categoryReason,
     status: record.status,
     recommended: record.recommended,
     note: record.note,
@@ -156,6 +160,8 @@ export async function saveUserProject(user, project, overrides = {}) {
     },
     update: {
       category: merged.category,
+      categorySource: merged.categorySource,
+      categoryReason: merged.categoryReason,
       status: merged.status,
       recommended: merged.recommended,
       note: merged.note,
@@ -173,6 +179,8 @@ export async function saveUserProject(user, project, overrides = {}) {
       userId: user.dbUserId || Number(user.id),
       projectId: targetProjectId,
       category: merged.category,
+      categorySource: merged.categorySource,
+      categoryReason: merged.categoryReason,
       status: merged.status,
       recommended: merged.recommended,
       note: merged.note,

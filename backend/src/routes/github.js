@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getSessionUser } from "../lib/sessionStore.js";
 import { fetchRepository } from "../services/githubService.js";
-import { classifyRepository } from "../services/classificationService.js";
+import { classifyRepositoryDetailed, CATEGORY_SOURCE } from "../services/classificationService.js";
 import { createProject, listProjects, updateProject } from "../services/projectService.js";
 import { saveUserProject } from "../services/userProjectService.js";
 
@@ -11,7 +11,7 @@ router.post("/import-repo", async (req, res) => {
   try {
     const user = await getSessionUser(req);
     const repoData = await fetchRepository(req.body.repo);
-    const detectedCategory = classifyRepository({
+    const classification = classifyRepositoryDetailed({
       name: repoData.repo,
       description: repoData.description,
       language: repoData.language,
@@ -20,7 +20,7 @@ router.post("/import-repo", async (req, res) => {
     const basePayload = {
       name: repoData.repo,
       author: repoData.owner,
-      category: req.body.category || detectedCategory,
+      category: req.body.category || classification.category,
       categorySource: req.body.category ? "manual" : "rule",
       status: req.body.status || "收藏备用",
       language: repoData.language || "Unknown",
@@ -58,7 +58,11 @@ router.post("/import-repo", async (req, res) => {
       : await createProject(basePayload);
 
     const resultProject = user
-      ? await saveUserProject(user, project, basePayload)
+      ? await saveUserProject(user, project, {
+          ...basePayload,
+          categorySource: req.body.category ? CATEGORY_SOURCE.manual : classification.categorySource,
+          categoryReason: req.body.category ? "manual:user-selected" : classification.categoryReason
+        })
       : project;
 
     res.status(201).json({

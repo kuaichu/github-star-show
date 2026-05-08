@@ -13,6 +13,7 @@ import {
   getUserProjectByProjectId,
   saveUserProject
 } from "../services/userProjectService.js";
+import { CATEGORY_SOURCE } from "../services/classificationService.js";
 
 const router = Router();
 
@@ -71,7 +72,14 @@ router.post("/", async (req, res) => {
   try {
     const user = await getSessionUser(req);
     const project = await createProject(req.body);
-    const result = user ? await saveUserProject(user, project, req.body) : project;
+    const userOverrides = user
+      ? {
+          ...req.body,
+          categorySource: CATEGORY_SOURCE.manual,
+          categoryReason: "manual:user-selected"
+        }
+      : req.body;
+    const result = user ? await saveUserProject(user, project, userOverrides) : project;
     res.status(201).json(result);
   } catch (error) {
     res.status(400).json({ message: error.message || "Unable to create project" });
@@ -88,7 +96,14 @@ router.patch("/:id", async (req, res) => {
       return;
     }
 
-    const result = user ? await saveUserProject(user, project, req.body) : project;
+    const userOverrides = user
+      ? {
+          ...req.body,
+          categorySource: CATEGORY_SOURCE.manual,
+          categoryReason: "manual:user-selected"
+        }
+      : req.body;
+    const result = user ? await saveUserProject(user, project, userOverrides) : project;
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message || "Unable to update project" });

@@ -60,6 +60,12 @@
           <p class="detail-text">{{ project.description || t("drawer.descriptionEmpty") }}</p>
         </section>
 
+        <section v-if="project.categoryReason || project.categorySource" class="detail-panel">
+          <h3>{{ classificationCopy.title }}</h3>
+          <p class="detail-text">{{ classificationSourceText }}</p>
+          <p v-if="project.categoryReason" class="detail-text">{{ classificationReasonText }}</p>
+        </section>
+
         <section v-if="project.features.length" class="detail-panel">
           <h3>{{ t("drawer.highlights") }}</h3>
           <ul class="feature-list">
@@ -243,6 +249,55 @@ const tabItems = computed(() => {
 });
 
 const renderedReadme = computed(() => renderMarkdown(props.project?.readme || ""));
+
+const classificationCopy = computed(() => {
+  if (locale.value === "zh-CN") {
+    return {
+      title: "分类依据",
+      source: "分类来源",
+      reason: "命中规则",
+      manual: "手动整理",
+      topic: "Topics 命中",
+      keyword: "关键词命中",
+      languageFallback: "语言兜底",
+      uncategorized: "未命中规则"
+    };
+  }
+
+  return {
+    title: "Classification",
+    source: "Source",
+    reason: "Reason",
+    manual: "Manual",
+    topic: "Topics",
+    keyword: "Keyword",
+    languageFallback: "Language fallback",
+    uncategorized: "No rule matched"
+  };
+});
+
+const classificationSourceText = computed(() => {
+  const value = props.project?.categorySource || "";
+  if (!value) {
+    return "";
+  }
+
+  let label = value;
+  if (value === "manual") label = classificationCopy.value.manual;
+  if (value === "topic") label = classificationCopy.value.topic;
+  if (value === "keyword") label = classificationCopy.value.keyword;
+  if (value === "language_fallback") label = classificationCopy.value.languageFallback;
+  if (value === "uncategorized") label = classificationCopy.value.uncategorized;
+  return `${classificationCopy.value.source}: ${label}`;
+});
+
+const classificationReasonText = computed(() => {
+  if (!props.project?.categoryReason) {
+    return "";
+  }
+
+  return `${classificationCopy.value.reason}: ${props.project.categoryReason}`;
+});
 
 watch(
   () => props.project?.id,

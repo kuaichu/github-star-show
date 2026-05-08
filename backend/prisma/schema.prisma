@@ -76,6 +76,8 @@ model UserProject {
   userId       Int
   projectId    Int
   category     String
+  categorySource String  @default("manual")
+  categoryReason String  @default("manual:legacy-data")
   status       String
   recommended  Boolean  @default(false)
   note         String

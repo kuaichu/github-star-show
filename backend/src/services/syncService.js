@@ -1,4 +1,4 @@
-import { classifyRepository, CATEGORY_LABELS } from "./classificationService.js";
+import { classifyRepositoryDetailed, CATEGORY_SOURCE } from "./classificationService.js";
 import { createProject, listProjects, updateProject } from "./projectService.js";
 import { getPrisma } from "../lib/prisma.js";
 import { inspectRepositoryState, isRepositoryStarred } from "./githubService.js";
@@ -163,6 +163,12 @@ export async function syncUserStars(user, options = {}) {
   for (const starItem of starred) {
     const repo = starItem.repo || starItem;
     syncedGithubUrls.add(String(repo.html_url || "").toLowerCase());
+    const classification = classifyRepositoryDetailed({
+      name: repo.name,
+      description: repo.description,
+      language: repo.language,
+      tags: repo.topics || []
+    });
     const normalized = {
       name: repo.name,
       author: repo.owner?.login || "",
@@ -176,12 +182,7 @@ export async function syncUserStars(user, options = {}) {
       tags: Array.isArray(repo.topics) ? repo.topics : [],
       features: [],
       note: `Imported from GitHub Star sync: ${repo.full_name}`,
-      category: classifyRepository({
-        name: repo.name,
-        description: repo.description,
-        language: repo.language,
-        tags: repo.topics || []
-      }),
+      category: classification.category,
       categorySource: "rule",
       status: "收藏备用",
       recommended: false
@@ -222,6 +223,8 @@ export async function syncUserStars(user, options = {}) {
     const remoteState = buildRemoteState(repo);
     const savedUserProject = await saveUserProject(user, project, {
       category: existingUserProject?.category || project.category,
+      categorySource: existingUserProject?.categorySource || classification.categorySource,
+      categoryReason: existingUserProject?.categoryReason || classification.categoryReason,
       status: existingUserProject?.status || project.status,
       recommended: existingUserProject?.recommended ?? project.recommended,
       note: existingUserProject?.note || project.note,
@@ -279,6 +282,8 @@ export async function syncUserStars(user, options = {}) {
 
       await saveUserProject(user, globalProject, {
         category: localItem.category,
+        categorySource: localItem.categorySource || CATEGORY_SOURCE.uncategorized,
+        categoryReason: localItem.categoryReason || "uncategorized:no-rule-matched",
         status: localItem.status,
         recommended: localItem.recommended,
         note: localItem.note,
@@ -329,7 +334,11 @@ export async function rerunRuleClassificationForUser(user) {
   const updatedItems = [];
 
   for (const item of userProjects) {
-    const nextCategory = classifyRepository({
+    if (item.categorySource === CATEGORY_SOURCE.manual) {
+      continue;
+    }
+
+    const nextClassification = classifyRepositoryDetailed({
       name: item.name,
       description: item.description,
       language: item.language,
@@ -339,7 +348,7 @@ export async function rerunRuleClassificationForUser(user) {
     const projectPayload = {
       name: item.name,
       author: item.author,
-      category: nextCategory,
+      category: nextClassification.category,
       categorySource: "rule",
       status: item.status,
       language: item.language,
@@ -365,10 +374,10 @@ export async function rerunRuleClassificationForUser(user) {
       continue;
     }
 
-    const shouldUpdateUserCategory = item.category === CATEGORY_LABELS.uncategorized;
-
     const saved = await saveUserProject(user, project, {
-      category: shouldUpdateUserCategory ? nextCategory : item.category,
+      category: nextClassification.category,
+      categorySource: nextClassification.categorySource,
+      categoryReason: nextClassification.categoryReason,
       status: item.status,
       recommended: item.recommended,
       note: item.note,
@@ -431,6 +440,8 @@ export async function recheckRemoteStatusForUser(user, projectIds = []) {
 
     const saved = await saveUserProject(user, project, {
       category: item.category,
+      categorySource: item.categorySource || CATEGORY_SOURCE.uncategorized,
+      categoryReason: item.categoryReason || "uncategorized:no-rule-matched",
       status: item.status,
       recommended: item.recommended,
       note: item.note,
