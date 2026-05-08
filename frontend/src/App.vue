@@ -268,6 +268,7 @@ const ALL_REMOTE_STATUS = "all";
 const DEFAULT_STATUS = "收藏备用";
 const UNCATEGORIZED = "未分类 / 待整理";
 const PAGE_SIZE_OPTIONS = [12, 24, 36, 48];
+const AUTH_BASE = import.meta.env.VITE_AUTH_BASE_URL || "http://localhost:3000/auth";
 
 const quickFilters = [
   { key: "recommended", badge: "HOT" },
@@ -824,7 +825,7 @@ async function removeVisibleProjects() {
 }
 
 function loginWithGithub() {
-  window.location.href = "http://localhost:3000/auth/github/login";
+  window.location.href = `${AUTH_BASE}/github/login`;
 }
 
 async function handleLogout() {
