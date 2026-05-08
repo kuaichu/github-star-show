@@ -8,19 +8,6 @@
       </p>
     </div>
 
-    <div class="status-panel">
-      <div class="status-row">
-        <span>{{ t("sidebar.productState") }}</span>
-        <strong>{{ t("sidebar.connected") }}</strong>
-      </div>
-      <div class="status-row">
-        <span>{{ t("sidebar.frontendStack") }}</span>
-      </div>
-      <div class="status-row">
-        <span>{{ t("sidebar.backendStack") }}</span>
-      </div>
-    </div>
-
     <div class="side-block">
       <h2>{{ t("sidebar.categoryTitle") }}</h2>
       <div class="menu-caption">{{ t("sidebar.categoryCaption") }}</div>
