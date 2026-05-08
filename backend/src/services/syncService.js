@@ -192,25 +192,31 @@ export async function syncUserStars(user, options = {}) {
       `${item.author}/${item.name}`.toLowerCase() === repo.full_name.toLowerCase()
     );
 
-    const project = existing
-      ? await updateProject(existing.id, {
-          ...normalized,
-          category: existing.category || normalized.category,
-          categorySource: existing.categorySource || normalized.categorySource,
-          status: existing.status,
-          recommended: existing.recommended,
-          docs: existing.docs || normalized.docs,
-          demo: existing.demo || normalized.demo,
-          note: existing.note || normalized.note,
-          features: existing.features,
-          tags: existing.tags.length ? existing.tags : normalized.tags,
-          aiCategory: existing.aiCategory || null,
-          aiConfidence: existing.aiConfidence ?? null,
-          aiReason: existing.aiReason || "",
-          aiModel: existing.aiModel || "",
-          aiClassifiedAt: existing.aiClassifiedAt || null
-        })
-      : await createProject(normalized);
+    let project = null;
+
+    if (existing) {
+      project = await updateProject(existing.id, {
+        ...normalized,
+        category: existing.category || normalized.category,
+        categorySource: existing.categorySource || normalized.categorySource,
+        status: existing.status,
+        recommended: existing.recommended,
+        docs: existing.docs || normalized.docs,
+        demo: existing.demo || normalized.demo,
+        note: existing.note || normalized.note,
+        features: existing.features,
+        tags: existing.tags.length ? existing.tags : normalized.tags,
+        aiCategory: existing.aiCategory || null,
+        aiConfidence: existing.aiConfidence ?? null,
+        aiReason: existing.aiReason || "",
+        aiModel: existing.aiModel || "",
+        aiClassifiedAt: existing.aiClassifiedAt || null
+      });
+    }
+
+    if (!project) {
+      project = await createProject(normalized);
+    }
 
     const existingUserProject = await getUserProjectByProjectId(user, project.id);
     const remoteState = buildRemoteState(repo);
