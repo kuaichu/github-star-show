@@ -75,6 +75,9 @@
     </div>
 
     <div class="sidebar-footnote">
+      <button class="sidebar-link-button" type="button" @click="$emit('open-changelog')">
+        {{ changelogLabel }}
+      </button>
       <div class="sidebar-footnote-title">{{ t("sidebar.aboutTitle") }}</div>
       <p class="sidebar-footnote-copy">
         {{ t("sidebar.aboutCopy") }}
@@ -84,9 +87,10 @@
 </template>
 
 <script setup>
-import { t, translateCategory } from "../i18n";
+import { computed } from "vue";
+import { locale, t, translateCategory } from "../i18n";
 
-defineProps({
+const props = defineProps({
   categories: Array,
   counts: Object,
   remoteStatuses: Array,
@@ -95,5 +99,9 @@ defineProps({
   modelValue: Object
 });
 
-defineEmits(["update:category", "update:remote-status", "toggle-quick"]);
+defineEmits(["update:category", "update:remote-status", "toggle-quick", "open-changelog"]);
+
+const changelogLabel = computed(() =>
+  locale.value === "en" ? "Release Notes" : "更新记录"
+);
 </script>

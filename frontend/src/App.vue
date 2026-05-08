@@ -10,6 +10,7 @@
       @update:category="updateCategory"
       @update:remote-status="updateRemoteStatus"
       @toggle-quick="toggleQuick"
+      @open-changelog="openChangelog"
     />
 
     <main class="main">
@@ -232,6 +233,8 @@
     :format-number="formatNumber"
     @close="closeDetail"
   />
+
+  <ChangelogDrawer :visible="changelogOpen" @close="closeChangelog" />
 </template>
 
 <script setup>
@@ -255,6 +258,7 @@ import {
   updateProject
 } from "./api/projects";
 import AdminPanel from "./components/AdminPanel.vue";
+import ChangelogDrawer from "./components/ChangelogDrawer.vue";
 import ProjectDrawer from "./components/ProjectDrawer.vue";
 import ProjectGrid from "./components/ProjectGrid.vue";
 import SidebarPanel from "./components/SidebarPanel.vue";
@@ -292,6 +296,7 @@ const categories = ref([]);
 const statusOptions = ref([]);
 const categoryCounts = ref({});
 const stats = ref([]);
+const changelogOpen = ref(false);
 const drawerOpen = ref(false);
 const activeProject = ref(null);
 const adminMode = ref(false);
@@ -583,6 +588,14 @@ async function openDetail(id) {
 
 function closeDetail() {
   drawerOpen.value = false;
+}
+
+function openChangelog() {
+  changelogOpen.value = true;
+}
+
+function closeChangelog() {
+  changelogOpen.value = false;
 }
 
 function syncDraft(project) {
