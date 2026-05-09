@@ -6,3 +6,6 @@ dist
 Thumbs.db
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
+
+# Docs (local only)
+/Documents/
