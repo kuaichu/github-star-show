@@ -2147,10 +2147,12 @@ body::after {
     height: auto;
     border-right: none;
     border-bottom: 1px solid var(--line);
+    order: 2;
   }
 
   .main {
     padding: 18px;
+    order: 1;
   }
 
   .hero-title {
