@@ -1,5 +1,5 @@
 <template>
-  <div class="drawer-mask" :class="{ show: visible }" @click="$emit('close')"></div>
+  <div class="drawer-mask" :class="{ show: visible }" @click="closeDrawer"></div>
   <aside class="drawer" :class="{ show: visible }" :aria-hidden="visible ? 'false' : 'true'">
     <div class="drawer-head">
       <div>
@@ -21,7 +21,17 @@
           </a>
         </div>
       </div>
-      <button class="close-button" type="button" :aria-label="t('drawer.close')" @click="$emit('close')">&times;</button>
+      <div class="drawer-head-actions">
+        <button
+          v-if="project && !editing"
+          class="ghost-button drawer-edit-btn"
+          type="button"
+          @click="startEditing"
+        >
+          {{ t("drawer.edit") }}
+        </button>
+        <button class="close-button" type="button" :aria-label="t('drawer.close')" @click="closeDrawer">&times;</button>
+      </div>
     </div>
 
     <template v-if="project">
@@ -38,7 +48,60 @@
         </button>
       </nav>
 
-      <template v-if="activeTab === 'overview'">
+      <template v-if="editing">
+        <section class="detail-panel">
+          <h3>{{ tabCopy.editTitle }}</h3>
+          <div class="drawer-edit-form">
+            <label class="drawer-edit-field">
+              <span class="drawer-edit-label">{{ t("drawer.fields.category") }}</span>
+              <select v-model="editForm.category" class="select">
+                <option
+                  v-for="cat in categoryOptions"
+                  :key="cat"
+                  :value="cat"
+                >{{ translateCategory(cat) }}</option>
+              </select>
+            </label>
+            <label class="drawer-edit-field">
+              <span class="drawer-edit-label">{{ t("drawer.fields.status") }}</span>
+              <select v-model="editForm.status" class="select">
+                <option
+                  v-for="opt in statusOptions"
+                  :key="opt"
+                  :value="opt"
+                >{{ translateStatus(opt) }}</option>
+              </select>
+            </label>
+            <label class="drawer-edit-field drawer-edit-field-full">
+              <span class="drawer-edit-label">{{ t("drawer.fields.recommended") }}</span>
+              <div class="checkbox-field">
+                <input
+                  id="drawer-recommended"
+                  v-model="editForm.recommended"
+                  type="checkbox"
+                />
+              </div>
+            </label>
+            <label class="drawer-edit-field drawer-edit-field-full">
+              <span class="drawer-edit-label">{{ t("drawer.notes") }}</span>
+              <textarea
+                v-model="editForm.note"
+                class="textarea"
+                rows="4"
+              ></textarea>
+            </label>
+          </div>
+          <div class="drawer-edit-actions">
+            <button class="ghost-button" type="button" @click="cancelEditing">{{ t("drawer.cancel") }}</button>
+            <button class="button" type="button" :disabled="saving" @click="saveEditing">
+              {{ saving ? t("common.loadingShort") : t("drawer.save") }}
+            </button>
+          </div>
+          <p v-if="editMessage" class="drawer-edit-message">{{ editMessage }}</p>
+        </section>
+      </template>
+
+      <template v-else-if="activeTab === 'overview'">
         <section class="detail-panel">
           <h3>{{ t("drawer.overview") }}</h3>
           <div class="detail-grid">
@@ -144,19 +207,84 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { updateProject } from "../api/projects";
 import { locale, t, translateCategory, translateRemoteStatus, translateStatus } from "../i18n";
 
 const props = defineProps({
   visible: Boolean,
   project: Object,
+  categories: { type: Array, default: () => [] },
   formatDate: Function,
   formatNumber: Function
 });
 
-defineEmits(["close"]);
+const emit = defineEmits(["close", "saved"]);
 
 const activeTab = ref("overview");
+const editing = ref(false);
+const saving = ref(false);
+const editMessage = ref("");
+const editForm = reactive({
+  category: "",
+  status: "",
+  note: "",
+  recommended: false
+});
+
+const statusOptions = ["收藏备用", "已部署", "正在使用", "待研究"];
+
+const categoryOptions = computed(() => {
+  return props.categories.filter(c => c && c !== "__all_projects__");
+});
+
+function initEditForm() {
+  if (!props.project) return;
+  editForm.category = props.project.category || "";
+  editForm.status = props.project.status || "";
+  editForm.note = props.project.note || "";
+  editForm.recommended = Boolean(props.project.recommended);
+}
+
+function startEditing() {
+  initEditForm();
+  editing.value = true;
+  editMessage.value = "";
+}
+
+function cancelEditing() {
+  editing.value = false;
+  editMessage.value = "";
+}
+
+function closeDrawer() {
+  if (editing.value) {
+    cancelEditing();
+  }
+  emit("close");
+}
+
+async function saveEditing() {
+  if (!props.project) return;
+  saving.value = true;
+  editMessage.value = "";
+
+  try {
+    const updated = await updateProject(props.project.id, {
+      category: editForm.category,
+      status: editForm.status,
+      note: editForm.note,
+      recommended: editForm.recommended
+    });
+    emit("saved", updated);
+    editing.value = false;
+    editMessage.value = t("drawer.saveSuccess");
+  } catch (error) {
+    editMessage.value = error.message || t("drawer.saveFailed");
+  } finally {
+    saving.value = false;
+  }
+}
 
 const tabCopy = computed(() => {
   if (locale.value === "zh-CN") {
@@ -171,7 +299,8 @@ const tabCopy = computed(() => {
       openReadme: "在 GitHub 中查看 README",
       github: "GitHub",
       demo: "演示",
-      docs: "文档"
+      docs: "文档",
+      editTitle: "编辑项目"
     };
   }
 
@@ -186,7 +315,8 @@ const tabCopy = computed(() => {
     openReadme: "Open README on GitHub",
     github: "GitHub",
     demo: "Demo",
-    docs: "Docs"
+    docs: "Docs",
+    editTitle: "Edit Project"
   };
 });
 
@@ -198,8 +328,13 @@ const metaItems = computed(() => {
     { label: t("drawer.fields.status"), value: translateStatus(props.project.status) },
     { label: t("drawer.fields.language"), value: props.project.language },
     { label: t("drawer.fields.stars"), value: props.formatNumber(props.project.stars) },
-    { label: t("drawer.fields.updated"), value: props.formatDate(props.project.updatedAt) },
-    { label: t("drawer.fields.recommended"), value: props.project.recommended ? t("drawer.fields.yes") : t("drawer.fields.no") }
+    { label: t("drawer.fields.recommended"), value: props.project.recommended ? t("drawer.fields.yes") : t("drawer.fields.no") },
+    ...(props.project.latestReleaseAt
+      ? [{ label: t("drawer.latestRelease"), value: props.formatDate(props.project.latestReleaseAt) }]
+      : []),
+    ...(props.project.latestCommitAt
+      ? [{ label: t("drawer.latestCommit"), value: props.formatDate(props.project.latestCommitAt) }]
+      : [])
   ];
 });
 
@@ -303,6 +438,8 @@ watch(
   () => props.project?.id,
   () => {
     activeTab.value = props.project?.readme ? "readme" : "overview";
+    editing.value = false;
+    editMessage.value = "";
   },
   { immediate: true }
 );

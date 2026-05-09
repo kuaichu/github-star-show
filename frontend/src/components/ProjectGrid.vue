@@ -7,10 +7,19 @@
       </div>
     </div>
 
-    <TransitionGroup v-if="projects.length" name="project-grid" tag="div" class="grid">
-      <article v-for="item in projects" :key="item.id" class="card">
+    <TransitionGroup v-if="projects.length" name="project-grid" tag="div" class="grid" :class="{ 'grid-animate': animate }">
+      <article v-for="item in projects" :key="item.id" class="card" :class="{ 'card-selected': selectedIds.has(item.id) }">
         <div class="card-body">
           <div class="card-head">
+            <div v-if="showTriage" class="card-checkbox-area">
+              <input
+                :id="`select-${item.id}`"
+                class="card-checkbox"
+                type="checkbox"
+                :checked="selectedIds.has(item.id)"
+                @change="toggleSelect(item.id)"
+              />
+            </div>
             <div class="chip-row">
               <span class="chip brand">{{ translateCategory(item.category) }}</span>
               <span class="chip blue">{{ item.language }}</span>
@@ -19,12 +28,14 @@
             </div>
             <div class="card-head-side">
               <span v-if="item.remoteStatus !== 'active'" class="chip danger">{{ translateRemoteStatus(item.remoteStatus) }}</span>
-              <span class="card-meta">{{ t("projects.updated", { date: formatDate(item.updatedAt) }) }}</span>
             </div>
           </div>
 
           <h3>{{ item.name }}</h3>
           <div class="card-meta card-meta-main">@{{ item.author }} / {{ translateStatus(item.status) }} / ★{{ formatNumber(item.stars) }}</div>
+          <div v-if="item.latestCommitAt || item.latestReleaseAt" class="card-meta card-meta-activity-line">
+            {{ t("projects.commitShort", { date: (item.latestCommitAt || item.updatedAt).slice(0, 10) }) }}<span v-if="item.latestReleaseAt"> · {{ t("projects.releaseShort", { date: item.latestReleaseAt.slice(0, 10) }) }}</span>
+          </div>
           <p class="card-description">{{ item.description }}</p>
 
           <div v-if="item.features.length" class="card-section">
@@ -52,7 +63,7 @@
                 class="triage-chip"
                 type="button"
                 :disabled="triageSavingId === item.id"
-                @click="$emit('quick-category', { id: item.id, category })"
+                @click="handleQuickCategory(item.id, category)"
               >
                 {{ translateCategory(category) }}
               </button>
@@ -60,7 +71,7 @@
                 class="triage-chip triage-chip-muted"
                 type="button"
                 :disabled="triageSavingId === item.id"
-                @click="$emit('mark-research', item.id)"
+                @click="handleMarkResearch(item.id)"
               >
                 {{ triageSavingId === item.id ? t("triage.saving") : t("triage.markResearch") }}
               </button>
@@ -79,15 +90,23 @@
       </article>
     </TransitionGroup>
 
-    <div v-else class="empty">
-      <h3>{{ t("projects.noResultsTitle") }}</h3>
-      <p>{{ t("projects.noResultsCopy") }}</p>
-    </div>
+    <EmptyState v-else icon="search">
+      <template #title>{{ t("projects.noResultsTitle") }}</template>
+      {{ t("projects.noResultsCopy") }}
+    </EmptyState>
   </section>
 </template>
 
 <script setup>
+import { ref, onMounted, nextTick } from "vue";
+import EmptyState from "./EmptyState.vue";
 import { t, translateCategory, translateRemoteStatus, translateStatus } from "../i18n";
+
+const animate = ref(false);
+
+onMounted(() => {
+  nextTick(() => { animate.value = true; });
+});
 
 const languageHints = {
   Python: ["AI / LLM", "自动化 / 效率工具", "安全 / CTF"],
@@ -110,7 +129,7 @@ const languageHints = {
   Objective_C: ["前端 UI / 可视化", "自动化 / 效率工具"]
 };
 
-defineProps({
+const props = defineProps({
   projects: { type: Array, default: () => [] },
   totalCount: { type: Number, default: 0 },
   rangeLabel: { type: String, default: "" },
@@ -118,9 +137,28 @@ defineProps({
   showTriage: { type: Boolean, default: false },
   triageCategories: { type: Array, default: () => [] },
   triageSavingId: { type: Number, default: null },
+  selectedIds: { type: Set, default: () => new Set() },
   formatDate: { type: Function, required: true },
   formatNumber: { type: Function, required: true }
 });
 
-defineEmits(["detail", "quick-category", "mark-research"]);
+const emit = defineEmits(["detail", "quick-category", "mark-research", "update:selectedIds"]);
+
+function toggleSelect(id) {
+  const next = new Set(props.selectedIds);
+  if (next.has(id)) {
+    next.delete(id);
+  } else {
+    next.add(id);
+  }
+  emit("update:selectedIds", next);
+}
+
+function handleQuickCategory(id, category) {
+  emit("quick-category", { id, category });
+}
+
+function handleMarkResearch(id) {
+  emit("mark-research", id);
+}
 </script>

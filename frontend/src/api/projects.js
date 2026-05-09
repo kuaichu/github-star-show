@@ -156,3 +156,27 @@ export function deleteManagedCategory(name) {
     method: "DELETE"
   });
 }
+
+export function getUserRules() {
+  return request("/rules");
+}
+
+export function createRule(payload) {
+  return request("/rules", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateRule(id, payload) {
+  return request(`/rules/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteRule(id) {
+  return request(`/rules/${id}`, {
+    method: "DELETE"
+  });
+}

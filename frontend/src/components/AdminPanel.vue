@@ -56,6 +56,60 @@
       <p v-if="categoryMessage" class="admin-message">{{ categoryMessage }}</p>
     </details>
 
+    <details class="admin-category-management">
+      <summary class="admin-category-summary">
+        <h3>{{ t("admin.rulesTitle") }}</h3>
+      </summary>
+      <p class="admin-category-copy">{{ t("admin.rulesCopy") }}</p>
+
+      <div v-if="rules.length" class="admin-category-group">
+        <div v-for="rule in rules" :key="rule.id" class="admin-category-row">
+          <div>
+            <span class="chip brand">{{ rule.targetCategory }}</span>
+            <span class="rule-chip-type">{{ ruleTypeLabel(rule.matchType) }}</span>
+            <span class="rule-chip-value">{{ rule.matchValue }}</span>
+          </div>
+          <div class="admin-category-row-actions">
+            <button class="danger-button-small" type="button" @click="deleteRule(rule.id)">{{ t("admin.deleteRule") }}</button>
+          </div>
+        </div>
+      </div>
+      <p v-else class="admin-list-meta">{{ t("admin.rulesEmpty") }}</p>
+
+      <div class="rule-form-row">
+        <select v-model="ruleForm.matchType" class="select rule-form-select">
+          <option value="topic">Topic</option>
+          <option value="keyword">Keyword</option>
+          <option value="language">Language</option>
+        </select>
+        <input
+          v-model="ruleForm.matchValue"
+          class="input"
+          type="text"
+          :placeholder="t('admin.ruleValuePlaceholder')"
+        />
+        <input
+          v-model="ruleForm.targetCategory"
+          class="input"
+          type="text"
+          :placeholder="t('admin.ruleCategoryPlaceholder')"
+          list="rule-category-options"
+        />
+        <datalist id="rule-category-options">
+          <option v-for="cat in categoryOptions" :key="cat" :value="cat" />
+        </datalist>
+        <button
+          class="button"
+          type="button"
+          :disabled="!ruleForm.matchValue.trim() || !ruleForm.targetCategory.trim()"
+          @click="addRule"
+        >
+          {{ t("admin.addRule") }}
+        </button>
+      </div>
+      <p v-if="ruleMessage" class="admin-message">{{ ruleMessage }}</p>
+    </details>
+
     <div class="admin-layout">
       <aside class="admin-list">
         <div class="admin-list-head">
@@ -86,9 +140,9 @@
           <span>{{ translateCategory(item.category) }} / {{ translateStatus(item.status) }}</span>
         </button>
 
-        <div v-if="!filteredProjects.length" class="admin-empty-list">
-          {{ t("admin.emptyList") }}
-        </div>
+        <EmptyState v-if="!filteredProjects.length" icon="folder">
+          <template #title>{{ t("admin.emptyList") }}</template>
+        </EmptyState>
       </aside>
 
       <Transition name="admin-editor" mode="out-in">
@@ -265,13 +319,17 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import EmptyState from "./EmptyState.vue";
 import { locale, t, translateCategory, translateStatus } from "../i18n";
 import {
   getManagedCategories,
   createManagedCategory,
   renameManagedCategory,
-  deleteManagedCategory
+  deleteManagedCategory,
+  getUserRules,
+  createRule as createRuleApi,
+  deleteRule as deleteRuleApi
 } from "../api/projects.js";
 
 const props = defineProps({
@@ -318,6 +376,63 @@ const categoryToDelete = ref(null);
 const showRenameModal = ref(false);
 const categoryToRename = ref(null);
 const renameCategoryName = ref("");
+
+const rules = ref([]);
+const ruleMessage = ref("");
+const ruleForm = ref({
+  matchType: "keyword",
+  matchValue: "",
+  targetCategory: ""
+});
+
+async function loadRules() {
+  try {
+    const data = await getUserRules();
+    rules.value = data.rules || [];
+  } catch {
+    rules.value = [];
+  }
+}
+
+function ruleTypeLabel(type) {
+  if (type === "topic") return "Topic";
+  if (type === "keyword") return "Keyword";
+  if (type === "language") return "Language";
+  return type;
+}
+
+async function addRule() {
+  const matchValue = ruleForm.value.matchValue.trim();
+  const targetCategory = ruleForm.value.targetCategory.trim();
+  if (!matchValue || !targetCategory) {
+    ruleMessage.value = t("admin.ruleValueRequired");
+    return;
+  }
+
+  try {
+    await createRuleApi({
+      matchType: ruleForm.value.matchType,
+      matchValue,
+      targetCategory,
+      priority: 0
+    });
+    ruleForm.value.matchValue = "";
+    ruleForm.value.targetCategory = "";
+    ruleMessage.value = "";
+    await loadRules();
+  } catch (err) {
+    ruleMessage.value = err.message || t("admin.ruleAddFailed");
+  }
+}
+
+async function deleteRule(ruleId) {
+  try {
+    await deleteRuleApi(ruleId);
+    await loadRules();
+  } catch (err) {
+    ruleMessage.value = err.message || t("admin.ruleDeleteFailed");
+  }
+}
 
 const editorKey = computed(() => (props.selectedProject?.id ? `project-${props.selectedProject.id}` : "create-project"));
 const categoryOptions = computed(() => props.categories.filter(item => item && item !== "全部项目" && item !== "__all_projects__"));
@@ -433,4 +548,8 @@ async function confirmRenameCategory() {
     categoryMessage.value = err.message || t("admin.categoryRenameFailed");
   }
 }
+
+onMounted(() => {
+  loadRules();
+});
 </script>

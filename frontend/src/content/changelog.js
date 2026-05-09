@@ -19,8 +19,8 @@ export const CHANGELOG_CONTENT = {
     close: "关闭",
     currentVersion: {
       heading: "当前版本",
-      version: "v0.1.0-beta.3",
-      summary: "分类规则扩充，分类管理重构，修复已知Bug",
+      version: "v0.1.0-beta.5",
+      summary: "维护活跃度、排序增强、Hero 布局修复",
       badge: "Beta"
     },
     capabilities: {
@@ -33,20 +33,52 @@ export const CHANGELOG_CONTENT = {
         "远端状态追踪",
         "后台编辑与项目管理",
         "删除时可选同步取消 GitHub Star",
-        "项目详情内 README 预览"
+        "项目详情内 README 预览",
+        "项目详情抽屉内直接编辑分类/状态/备注",
+        "未分类视图批量多选整理",
+        "自定义分类规则管理",
+        "项目维护活跃度展示（Release / Commit 时间）",
+        "多种排序方式（Star 时间、更新时间、Stars、名称）"
       ]
     },
     changelog: {
       heading: "更新历史",
       releases: [
-	  {
+        {
+          version: "v0.1.0-beta.5",
+          date: "2026-05-10",
+          badge: "功能更新",
+          items: [
+            "项目维护活跃度：后端采集 Release / Commit 时间，同步后台非阻塞刷新",
+            "卡片活跃度展示：作者/Star 区下方单行紧凑 YYYY-MM-DD 格式",
+            "抽屉概览独立展示最新 Release 和最近提交，移除冗余更新时间",
+            "新增 Star 时间排序，默认排序改为 Star 时间最新",
+            "排序选项按用户意图重排：Star 时间 → 更新时间 → Stars → 名称",
+            "修复 Hero 同步状态文本位置跳动问题"
+          ]
+        },
+        {
+          version: "v0.1.0-beta.4",
+          date: "2026-05-09",
+          badge: "功能更新",
+          items: [
+            "项目详情抽屉内直接编辑分类、状态、备注、推荐标记",
+            "未分类整理视图支持多选批量归类与批量标记待研究",
+            "后台新增自定义分类规则管理面板，支持 Topic/Keyword/Language 匹配",
+            "自定义分类规则在同步和重跑时优先于内置规则生效"
+          ]
+        },
+        {
           version: "v0.1.0-beta.3",
           date: "2026-05-09",
           badge: "功能更新",
           items: [
             "分类规则扩充",
             "修复English下的已知Bug",
-            "分类管理重构为为按用户隔离"
+            "分类管理重构为为按用户隔离",
+            "新增搜索框，支持按名称/作者/描述/标签筛选",
+            "新增排序切换，支持按 Stars/名称/更新时间升降序",
+            "产品级 UI 精修：Hero 区精简、更多操作下拉、侧栏手风琴、卡片悬停 glow、标签降亮度、分页压缩、间距呼吸感"
           ]
         },
         {
@@ -96,6 +128,7 @@ export const CHANGELOG_CONTENT = {
         "继续增强规则分类覆盖率",
         "补齐自部署文档与升级说明",
         "继续打磨后台整理流程",
+        "自动化定时同步",
         "准备正式版发布"
       ]
     }
@@ -107,8 +140,8 @@ export const CHANGELOG_CONTENT = {
     close: "Close",
     currentVersion: {
       heading: "Current Version",
-      version: "v0.1.0-beta.3",
-      summary: "The classification rules were expanded, the classification management system was restructured, and known bugs were fixed.",
+      version: "v0.1.0-beta.5",
+      summary: "Maintenance activity, sort enhancements, Hero layout fix",
       badge: "Beta"
     },
     capabilities: {
@@ -121,23 +154,55 @@ export const CHANGELOG_CONTENT = {
         "Remote state tracking",
         "Admin editing and manual project management",
         "Optional GitHub unstar during deletion",
-        "README preview in project details"
+        "README preview in project details",
+        "In-drawer editing of category, status, notes",
+        "Batch multi-select triage in uncategorized view",
+        "Custom classification rule management",
+        "Maintenance activity display (Release / Commit time)",
+        "Multiple sort options (Star time, Updated, Stars, Name)"
       ]
     },
     changelog: {
       heading: "Changelog",
       releases: [
-	    {
+        {
+          version: "v0.1.0-beta.5",
+          date: "2026-05-10",
+          badge: "Feature Update",
+          items: [
+            "Maintenance activity: backend collects Release/Commit timestamps, fire-and-forget background refresh",
+            "Compact YYYY-MM-DD activity line below author/star meta on cards",
+            "Drawer overview now shows Latest Release and Latest Commit as separate entries, removed redundant Updated date",
+            "Sort by star time added, default sort changed to star-desc",
+            "Sort options reordered by user intent: Star time → Updated → Stars → Name",
+            "Fixed Hero sync status text position jumping"
+          ]
+        },
+        {
+          version: "v0.1.0-beta.4",
+          date: "2026-05-09",
+          badge: "Feature Update",
+          items: [
+            "In-drawer editing for category, status, notes, and recommended flag",
+            "Batch triage with multi-select categorization and mark-as-research in uncategorized view",
+            "Custom classification rule management panel in Admin (Topic/Keyword/Language matching)",
+            "Custom rules take priority over built-in rules during sync and reclassification"
+          ]
+        },
+        {
           version: "v0.1.0-beta.3",
           date: "2026-05-09",
           badge: "Feature Update",
           items: [
             "Expanded Category Rules",
-			"Fixed Known Bugs in English",
-			"Restructured Category Management to be Isolated by User"
+            "Fixed Known Bugs in English",
+            "Restructured Category Management to be Isolated by User",
+            "Added search box to filter by name, author, description, or tags",
+            "Added sort switching by Stars/name/last updated",
+            "UI refinement: compact hero, more-actions dropdown, sidebar accordion, card hover glow, dimmer tags, lighter pagination, breathing spacing"
           ]
         },
-	    {
+        {
           version: "v0.1.0-beta.2",
           date: "2026-05-08",
           badge: "Feature Update",
@@ -184,6 +249,7 @@ export const CHANGELOG_CONTENT = {
         "Stronger rule-based categorization",
         "Self-hosted deployment documentation",
         "More polished admin workflows",
+        "Automated scheduled sync",
         "Formal release preparation"
       ]
     }

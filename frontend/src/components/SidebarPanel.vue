@@ -8,8 +8,8 @@
       </p>
     </div>
 
-    <div class="side-block">
-      <h2>{{ t("sidebar.categoryTitle") }}</h2>
+    <details class="side-block" open>
+      <summary class="side-block-summary"><h2>{{ t("sidebar.categoryTitle") }}</h2></summary>
       <div class="menu-caption">{{ t("sidebar.categoryCaption") }}</div>
       <div class="menu-list">
         <button
@@ -24,10 +24,10 @@
           <small>{{ counts[category] ?? 0 }}</small>
         </button>
       </div>
-    </div>
+    </details>
 
-    <div v-if="remoteStatuses?.length" class="side-block">
-      <h2>{{ t("sidebar.remoteTitle") }}</h2>
+    <details v-if="remoteStatuses?.length" class="side-block" open>
+      <summary class="side-block-summary"><h2>{{ t("sidebar.remoteTitle") }}</h2></summary>
       <div class="menu-caption">{{ t("sidebar.remoteCaption") }}</div>
       <div class="menu-list">
         <button
@@ -42,10 +42,10 @@
           <small>{{ remoteCounts[status.key] ?? 0 }}</small>
         </button>
       </div>
-    </div>
+    </details>
 
-    <div class="side-block side-block-compact">
-      <h2>{{ t("sidebar.quickTitle") }}</h2>
+    <details class="side-block side-block-compact" open>
+      <summary class="side-block-summary"><h2>{{ t("sidebar.quickTitle") }}</h2></summary>
       <div class="quick-list">
         <button
           v-for="item in quickFilters"
@@ -59,7 +59,7 @@
           <small>{{ item.badge }}</small>
         </button>
       </div>
-    </div>
+    </details>
 
     <div class="sidebar-footnote">
       <button class="sidebar-link-button" type="button" @click="$emit('open-changelog')">

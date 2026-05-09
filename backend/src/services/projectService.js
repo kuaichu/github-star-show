@@ -96,7 +96,10 @@ function sanitizePayload(payload) {
       : Number(payload.aiConfidence),
     aiReason: payload.aiReason ? String(payload.aiReason).trim() : "",
     aiModel: payload.aiModel ? String(payload.aiModel).trim() : "",
-    aiClassifiedAt: payload.aiClassifiedAt ? new Date(payload.aiClassifiedAt) : null
+    aiClassifiedAt: payload.aiClassifiedAt ? new Date(payload.aiClassifiedAt) : null,
+    latestReleaseAt: payload.latestReleaseAt !== undefined ? payload.latestReleaseAt ? new Date(payload.latestReleaseAt) : null : null,
+    latestCommitAt: payload.latestCommitAt !== undefined ? payload.latestCommitAt ? new Date(payload.latestCommitAt) : null : null,
+    activityCheckedAt: payload.activityCheckedAt !== undefined ? payload.activityCheckedAt ? new Date(payload.activityCheckedAt) : null : null
   };
 }
 
@@ -241,7 +244,10 @@ export async function updateProject(id, payload) {
       aiReason: payload.aiReason !== undefined ? input.aiReason : existing.aiReason,
       aiModel: payload.aiModel !== undefined ? input.aiModel : existing.aiModel,
       aiClassifiedAt: payload.aiClassifiedAt !== undefined ? input.aiClassifiedAt : existing.aiClassifiedAt,
-      categorySource: payload.categorySource !== undefined ? input.categorySource : "manual"
+      categorySource: payload.categorySource !== undefined ? input.categorySource : "manual",
+      latestReleaseAt: payload.latestReleaseAt !== undefined ? input.latestReleaseAt : existing.latestReleaseAt,
+      latestCommitAt: payload.latestCommitAt !== undefined ? input.latestCommitAt : existing.latestCommitAt,
+      activityCheckedAt: payload.activityCheckedAt !== undefined ? input.activityCheckedAt : existing.activityCheckedAt
     };
 
     return memoryProjects[index];
@@ -266,6 +272,9 @@ export async function updateProject(id, payload) {
         aiReason: payload.aiReason !== undefined ? input.aiReason : existing.aiReason,
         aiModel: payload.aiModel !== undefined ? input.aiModel : existing.aiModel,
         aiClassifiedAt: payload.aiClassifiedAt !== undefined ? input.aiClassifiedAt : existing.aiClassifiedAt,
+        latestReleaseAt: payload.latestReleaseAt !== undefined ? input.latestReleaseAt : existing.latestReleaseAt,
+        latestCommitAt: payload.latestCommitAt !== undefined ? input.latestCommitAt : existing.latestCommitAt,
+        activityCheckedAt: payload.activityCheckedAt !== undefined ? input.activityCheckedAt : existing.activityCheckedAt,
         features: JSON.stringify(input.features),
         tags: JSON.stringify(input.tags)
       }
@@ -315,6 +324,47 @@ export async function updateProjectAiClassification(id, classification) {
   });
 
   return normalizeProject(updated);
+}
+
+export async function updateProjectActivity(id, activityData) {
+  if (!activityData || (!activityData.latestReleaseAt && !activityData.latestCommitAt && !activityData.activityCheckedAt)) {
+    return null;
+  }
+
+  const prisma = getPrisma();
+
+  if (!prisma) {
+    const index = memoryProjects.findIndex(project => project.id === Number(id));
+
+    if (index === -1) {
+      return null;
+    }
+
+    memoryProjects[index] = {
+      ...memoryProjects[index],
+      latestReleaseAt: activityData.latestReleaseAt || memoryProjects[index].latestReleaseAt || null,
+      latestCommitAt: activityData.latestCommitAt || memoryProjects[index].latestCommitAt || null,
+      activityCheckedAt: activityData.activityCheckedAt || new Date().toISOString()
+    };
+
+    return normalizeProject(memoryProjects[index]);
+  }
+
+  try {
+    const data = {};
+    if (activityData.latestReleaseAt !== undefined) data.latestReleaseAt = activityData.latestReleaseAt instanceof Date ? activityData.latestReleaseAt : new Date(activityData.latestReleaseAt);
+    if (activityData.latestCommitAt !== undefined) data.latestCommitAt = activityData.latestCommitAt instanceof Date ? activityData.latestCommitAt : new Date(activityData.latestCommitAt);
+    data.activityCheckedAt = activityData.activityCheckedAt instanceof Date ? activityData.activityCheckedAt : new Date();
+
+    const updated = await prisma.project.update({
+      where: { id: Number(id) },
+      data
+    });
+
+    return normalizeProject(updated);
+  } catch {
+    return null;
+  }
 }
 
 export async function deleteProject(id) {

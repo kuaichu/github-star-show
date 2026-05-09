@@ -1,8 +1,10 @@
 import { classifyRepositoryDetailed, CATEGORY_SOURCE } from "./classificationService.js";
 import { createProject, listProjects, updateProject } from "./projectService.js";
+import { getUserRules } from "./ruleService.js";
 import { getPrisma } from "../lib/prisma.js";
-import { inspectRepositoryState, isRepositoryStarred } from "./githubService.js";
+import { inspectRepositoryState, isRepositoryStarred, fetchLatestRelease, fetchLatestCommit, parseGithubRepositoryUrl } from "./githubService.js";
 import { getUserProjectByProjectId, listUserProjects, saveUserProject } from "./userProjectService.js";
+import { updateProjectActivity } from "./projectService.js";
 
 export const SYNC_MODE_FULL = "full";
 export const SYNC_MODE_INCREMENTAL = "incremental";
@@ -107,6 +109,34 @@ function buildRemoteState(repo) {
   };
 }
 
+async function refreshActivityForProject(project, accessToken) {
+  if (!project?.github) return;
+
+  try {
+    const parsed = parseGithubRepositoryUrl(project.github);
+    if (!parsed) return;
+
+    const [releaseResult, commitResult] = await Promise.allSettled([
+      fetchLatestRelease(parsed.owner, parsed.repo, accessToken),
+      fetchLatestCommit(parsed.owner, parsed.repo, accessToken)
+    ]);
+
+    const activityData = {};
+
+    if (releaseResult.status === "fulfilled" && releaseResult.value) {
+      activityData.latestReleaseAt = new Date(releaseResult.value);
+    }
+    if (commitResult.status === "fulfilled" && commitResult.value) {
+      activityData.latestCommitAt = new Date(commitResult.value);
+    }
+    activityData.activityCheckedAt = new Date();
+
+    await updateProjectActivity(project.id, activityData);
+  } catch {
+    // Silently preserve existing values on failure
+  }
+}
+
 async function resolveRemoteStatusForProject(user, project) {
   try {
     const repoRef = project.github || `${project.author}/${project.name}`;
@@ -159,6 +189,7 @@ export async function syncUserStars(user, options = {}) {
   const prisma = getPrisma();
   const persistedUserId = user.dbUserId || Number(user.id);
   const syncedGithubUrls = new Set();
+  const userRules = getUserRules(persistedUserId);
 
   for (const starItem of starred) {
     const repo = starItem.repo || starItem;
@@ -168,7 +199,7 @@ export async function syncUserStars(user, options = {}) {
       description: repo.description,
       language: repo.language,
       tags: repo.topics || []
-    });
+    }, userRules);
     const normalized = {
       name: repo.name,
       author: repo.owner?.login || "",
@@ -317,6 +348,19 @@ export async function syncUserStars(user, options = {}) {
     });
   }
 
+  // Non-blocking activity data refresh
+  const activityProjects = [...importedProjects];
+  if (mode === SYNC_MODE_FULL) {
+    for (const item of existingUserProjects) {
+      if (!activityProjects.some(p => p.id === item.id)) {
+        activityProjects.push(item);
+      }
+    }
+  }
+  Promise.allSettled(
+    activityProjects.map(p => refreshActivityForProject(p, user.accessToken))
+  ).catch(() => {});
+
   return {
     mode,
     total: importedProjects.length,
@@ -332,6 +376,7 @@ export async function getProjectsForUser(user) {
 export async function rerunRuleClassificationForUser(user) {
   const userProjects = await listUserProjects(user);
   const updatedItems = [];
+  const userRules = getUserRules(user.dbUserId || user.id);
 
   for (const item of userProjects) {
     if (item.categorySource === CATEGORY_SOURCE.manual) {
@@ -343,7 +388,7 @@ export async function rerunRuleClassificationForUser(user) {
       description: item.description,
       language: item.language,
       tags: item.tags || []
-    });
+    }, userRules);
 
     const projectPayload = {
       name: item.name,

@@ -30,6 +30,9 @@ model Project {
   aiReason     String?
   aiModel      String?
   aiClassifiedAt DateTime?
+  latestReleaseAt DateTime?
+  latestCommitAt DateTime?
+  activityCheckedAt DateTime?
   userProjects UserProject[]
 }
 

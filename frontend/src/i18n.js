@@ -43,6 +43,7 @@ const messages = {
       fullResync: "全量重同步",
       rerunRules: "重跑规则分类",
       reclassifying: "分类处理中...",
+      moreActions: "更多操作",
       openAdmin: "打开后台",
       logout: "退出登录",
       aiButtonPending: "AI 分类 {count} 个待处理项目",
@@ -112,7 +113,12 @@ const messages = {
       saving: "保存中...",
       savedCategory: "已归类到 {category}",
       savedResearch: "已标记为待研究",
-      saveFailed: "快速整理失败"
+      saveFailed: "快速整理失败",
+      batchDone: "已批量归类 {count} 个项目",
+      batchResearchDone: "已批量标记 {count} 个项目为待研究"
+    },
+    batch: {
+      selected: "已选 {count} 项"
     },
     stats: {
       total: "项目总数",
@@ -133,11 +139,13 @@ const messages = {
       total: "共 {total} 个项目",
       recommended: "推荐",
       ai: "AI",
-      updated: "更新于 {date}",
+      commitShort: "提交 {date}",
+      releaseShort: "Release {date}",
       details: "查看详情",
       openGithub: "打开 GitHub",
       noResultsTitle: "没有匹配结果",
-      noResultsCopy: "试试更宽一点的筛选条件，或者重置当前过滤器。"
+      noResultsCopy: "试试更宽一点的筛选条件，或者重置当前过滤器。",
+      searchPlaceholder: "搜索名称、作者、描述或标签..."
     },
     drawer: {
       eyebrow: "项目详情",
@@ -153,12 +161,18 @@ const messages = {
       tags: "标签",
       ai: "AI 分类",
       close: "关闭",
+      edit: "编辑",
+      save: "保存",
+      cancel: "取消",
+      saveSuccess: "项目已更新。",
+      saveFailed: "保存失败",
+      latestRelease: "最新 Release",
+      latestCommit: "最近提交",
       fields: {
         category: "分类",
         status: "状态",
         language: "语言",
         stars: "Stars",
-        updated: "更新时间",
         recommended: "是否推荐",
         yes: "是",
         no: "否"
@@ -210,6 +224,16 @@ const messages = {
       cancel: "取消",
       categoryManagement: "分类管理",
       categoryManagementCopy: "创建、重命名或删除分类。所有分类均可修改。",
+      rulesTitle: "分类规则管理",
+      rulesCopy: "自定义分类规则。自定义规则优先于内置规则。支持 Topic 匹配、关键词匹配和语言匹配。",
+      rulesEmpty: "还没有自定义规则。新建一个规则来覆盖默认分类行为。",
+      deleteRule: "删除规则",
+      addRule: "添加规则",
+      ruleValuePlaceholder: "匹配值（如 pytorch）",
+      ruleCategoryPlaceholder: "目标分类（如 AI / LLM）",
+      ruleValueRequired: "匹配值和目标分类不能为空",
+      ruleAddFailed: "添加规则失败",
+      ruleDeleteFailed: "删除规则失败",
       addCategory: "添加分类",
       addCategoryPlaceholder: "新分类名称",
       renameCategory: "重命名",
@@ -270,6 +294,7 @@ const messages = {
       fullResync: "Full Re-sync",
       rerunRules: "Re-run Rule Categories",
       reclassifying: "Reclassifying...",
+      moreActions: "More Actions",
       openAdmin: "Open Admin",
       logout: "Logout",
       aiButtonPending: "Classify {count} Pending Projects",
@@ -339,7 +364,12 @@ const messages = {
       saving: "Saving...",
       savedCategory: "Moved to {category}",
       savedResearch: "Marked as To Research",
-      saveFailed: "Quick triage failed"
+      saveFailed: "Quick triage failed",
+      batchDone: "Batch categorized {count} projects",
+      batchResearchDone: "Batch marked {count} projects as To Research"
+    },
+    batch: {
+      selected: "{count} selected"
     },
     stats: {
       total: "Total Projects",
@@ -360,11 +390,13 @@ const messages = {
       total: "Total {total} projects",
       recommended: "Recommended",
       ai: "AI",
-      updated: "Updated {date}",
+      commitShort: "Commit {date}",
+      releaseShort: "Release {date}",
       details: "View Details",
       openGithub: "Open GitHub",
       noResultsTitle: "No Matching Results",
-      noResultsCopy: "Try a broader keyword or reset the current filters."
+      noResultsCopy: "Try a broader keyword or reset the current filters.",
+      searchPlaceholder: "Search by name, author, description or tags..."
     },
     drawer: {
       eyebrow: "Project Detail",
@@ -380,12 +412,18 @@ const messages = {
       tags: "Tags",
       ai: "AI Classification",
       close: "Close",
+      edit: "Edit",
+      save: "Save",
+      cancel: "Cancel",
+      saveSuccess: "Project updated.",
+      saveFailed: "Save failed",
+      latestRelease: "Latest Release",
+      latestCommit: "Latest Commit",
       fields: {
         category: "Category",
         status: "Status",
         language: "Language",
         stars: "Stars",
-        updated: "Updated",
         recommended: "Recommended",
         yes: "Yes",
         no: "No"
@@ -437,6 +475,16 @@ const messages = {
       cancel: "Cancel",
       categoryManagement: "Category Management",
       categoryManagementCopy: "Create, rename, or delete categories. All categories are fully editable.",
+      rulesTitle: "Classification Rules",
+      rulesCopy: "Create custom classification rules. Custom rules take priority over built-in rules. Supports topic matching, keyword matching, and language matching.",
+      rulesEmpty: "No custom rules yet. Add a rule to override default classification behavior.",
+      deleteRule: "Delete Rule",
+      addRule: "Add Rule",
+      ruleValuePlaceholder: "Match value (e.g. pytorch)",
+      ruleCategoryPlaceholder: "Target category (e.g. AI / LLM)",
+      ruleValueRequired: "Match value and target category are required",
+      ruleAddFailed: "Failed to add rule",
+      ruleDeleteFailed: "Failed to delete rule",
       addCategory: "Add Category",
       addCategoryPlaceholder: "New category name",
       renameCategory: "Rename",

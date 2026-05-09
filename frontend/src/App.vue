@@ -30,8 +30,40 @@
         </div>
       </div>
 
-      <Transition name="main-view" mode="out-in" appear>
-        <div v-if="adminMode" key="admin-view">
+      <div v-if="loading" class="view-shell">
+        <section class="hero-panel sk-hero">
+          <div class="hero-head">
+            <div class="hero-copy">
+              <div class="eyebrow sk-eyebrow">&nbsp;</div>
+              <h2 class="hero-title sk-title">&nbsp;</h2>
+              <p class="hero-subtitle sk-subtitle">&nbsp;</p>
+            </div>
+            <div class="hero-controls">
+              <span class="button sk-btn">&nbsp;</span>
+              <span class="button sk-btn sk-btn-ghost">&nbsp;</span>
+            </div>
+          </div>
+        </section>
+        <div class="stats sk-stats">
+          <div class="stat-card sk-stat"><div class="stat-label">&nbsp;</div><div class="stat-value">&nbsp;</div></div>
+          <div class="stat-card sk-stat"><div class="stat-label">&nbsp;</div><div class="stat-value">&nbsp;</div></div>
+          <div class="stat-card sk-stat"><div class="stat-label">&nbsp;</div><div class="stat-value">&nbsp;</div></div>
+          <div class="stat-card sk-stat"><div class="stat-label">&nbsp;</div><div class="stat-value">&nbsp;</div></div>
+        </div>
+        <section class="toolbar search-toolbar sk-toolbar">
+          <span class="input sk-search">&nbsp;</span>
+          <span class="select sk-sort">&nbsp;</span>
+        </section>
+        <div class="grid sk-grid">
+          <div class="card sk-card"><div class="card-body"><div class="sk-card-line sk-card-title">&nbsp;</div><div class="sk-card-line sk-card-meta">&nbsp;</div><div class="sk-card-line sk-card-desc">&nbsp;</div><div class="sk-card-line sk-card-desc sk-card-desc-short">&nbsp;</div></div></div>
+          <div class="card sk-card"><div class="card-body"><div class="sk-card-line sk-card-title">&nbsp;</div><div class="sk-card-line sk-card-meta">&nbsp;</div><div class="sk-card-line sk-card-desc">&nbsp;</div><div class="sk-card-line sk-card-desc sk-card-desc-short">&nbsp;</div></div></div>
+          <div class="card sk-card"><div class="card-body"><div class="sk-card-line sk-card-title">&nbsp;</div><div class="sk-card-line sk-card-meta">&nbsp;</div><div class="sk-card-line sk-card-desc">&nbsp;</div><div class="sk-card-line sk-card-desc sk-card-desc-short">&nbsp;</div></div></div>
+          <div class="card sk-card"><div class="card-body"><div class="sk-card-line sk-card-title">&nbsp;</div><div class="sk-card-line sk-card-meta">&nbsp;</div><div class="sk-card-line sk-card-desc">&nbsp;</div><div class="sk-card-line sk-card-desc sk-card-desc-short">&nbsp;</div></div></div>
+        </div>
+      </div>
+
+      <Transition name="admin-surface" mode="out-in">
+        <div v-if="adminMode" key="admin">
           <AdminPanel
             :projects="projects"
             :categories="sidebarCategories"
@@ -60,8 +92,7 @@
             @refresh-categories="loadCategories"
           />
         </div>
-
-        <div v-else-if="!isAuthenticated" key="guest-view">
+        <div v-else-if="!adminMode && !isAuthenticated" key="guest">
           <section class="hero-panel">
             <div class="hero-copy">
               <div class="eyebrow hero-eyebrow">{{ t("login.eyebrow") }}</div>
@@ -91,57 +122,68 @@
             </article>
           </section>
         </div>
-
-        <div v-else key="user-view">
+        <div v-else key="dashboard">
           <section class="hero-panel">
-            <div class="hero-head">
-              <div class="hero-copy">
-                <div class="eyebrow hero-eyebrow">{{ t("signedIn.eyebrow") }}</div>
-                <h2 class="hero-title">{{ t("signedIn.welcome", { name: currentUser.name }) }}</h2>
-                <p class="hero-subtitle">{{ t("signedIn.subtitle") }}</p>
-              </div>
-              <div class="hero-controls">
-                <button class="button" type="button" :disabled="syncing" @click="runStarSync">
-                  {{ syncing ? t("signedIn.sync") : primarySyncLabel }}
-                </button>
-                <button
-                  v-if="syncStatus.lastStarSyncAt"
-                  class="ghost-button"
-                  type="button"
-                  :disabled="syncing"
-                  @click="runStarSync('full')"
-                >
-                  {{ t("signedIn.fullResync") }}
-                </button>
-                <button
-                  class="ghost-button"
-                  type="button"
-                  :disabled="reclassifyingRules"
-                  @click="runRuleReclassification"
-                >
-                  {{ reclassifyingRules ? t("signedIn.reclassifying") : t("signedIn.rerunRules") }}
-                </button>
-                <button
-                  v-if="aiClassificationConfig.enabled"
-                  class="ghost-button"
-                  type="button"
-                  :disabled="classifyingAi"
-                  @click="runAiClassificationForProjects"
-                >
-                  {{ classifyingAi ? t("common.loadingShort") : aiButtonLabel }}
-                </button>
-                <button class="ghost-button" type="button" @click="openAdmin">{{ t("signedIn.openAdmin") }}</button>
-                <button class="ghost-button" type="button" @click="handleLogout">{{ t("signedIn.logout") }}</button>
+          <div class="hero-head">
+            <div class="hero-copy">
+              <div class="eyebrow hero-eyebrow">{{ t("signedIn.eyebrow") }}</div>
+              <h2 class="hero-title">{{ t("signedIn.welcome", { name: currentUser.name }) }}</h2>
+              <p class="hero-subtitle">{{ t("signedIn.subtitle") }}</p>
+              <p class="toolbar-tip">{{ aiSummaryText }}</p>
+              <p class="toolbar-tip">{{ syncStatusText }}</p>
+              <details v-if="syncStatus.recentRuns.length" class="sync-history">
+                <summary class="sync-history-summary">
+                  <span class="chip">{{ formatSyncRun(syncStatus.recentRuns[0]) }}</span>
+                  <span class="sync-history-badge">{{ syncStatus.recentRuns.length }} records</span>
+                </summary>
+                <div class="chip-row sync-history-chips">
+                  <span v-for="run in syncStatus.recentRuns" :key="run.id" class="chip">
+                    {{ formatSyncRun(run) }}
+                  </span>
+                </div>
+              </details>
+              <p v-if="syncMessage" class="toolbar-tip">{{ syncMessage }}</p>
+            </div>
+            <div class="hero-controls">
+              <button class="button" type="button" :disabled="syncing" @click="runStarSync">
+                {{ syncing ? t("signedIn.sync") : primarySyncLabel }}
+              </button>
+                <details class="more-actions">
+                  <summary class="more-actions-trigger"><span>{{ t("signedIn.moreActions") }}</span><span class="more-actions-arrow">▾</span></summary>
+                  <div class="more-actions-dropdown">
+                    <button
+                      v-if="syncStatus.lastStarSyncAt"
+                      class="more-actions-item"
+                      type="button"
+                      :disabled="syncing"
+                      @click="runStarSync('full')"
+                    >
+                      {{ t("signedIn.fullResync") }}
+                    </button>
+                    <button
+                      class="more-actions-item"
+                      type="button"
+                      :disabled="reclassifyingRules"
+                      @click="runRuleReclassification"
+                    >
+                      {{ reclassifyingRules ? t("signedIn.reclassifying") : t("signedIn.rerunRules") }}
+                    </button>
+                    <button
+                      v-if="aiClassificationConfig.enabled"
+                      class="more-actions-item"
+                      type="button"
+                      :disabled="classifyingAi"
+                      @click="runAiClassificationForProjects"
+                    >
+                      {{ classifyingAi ? t("common.loadingShort") : aiButtonLabel }}
+                    </button>
+                    <div class="more-actions-divider"></div>
+                    <button class="more-actions-item" type="button" @click="openAdmin">{{ t("signedIn.openAdmin") }}</button>
+                    <button class="more-actions-item more-actions-item-danger" type="button" @click="handleLogout">{{ t("signedIn.logout") }}</button>
+                  </div>
+                </details>
               </div>
             </div>
-            <p class="toolbar-tip">{{ aiSummaryText }}</p>
-            <p class="toolbar-tip">{{ syncStatusText }}</p>
-            <div v-if="syncStatus.recentRuns.length" class="chip-row">
-              <span v-for="run in syncStatus.recentRuns" :key="run.id" class="chip">
-                {{ formatSyncRun(run) }}
-              </span>
-            </div>
-            <p v-if="syncMessage" class="toolbar-tip">{{ syncMessage }}</p>
           </section>
 
           <section v-if="isRemoteFilterActive && filteredProjects.length" class="toolbar remote-ops">
@@ -183,10 +225,57 @@
                 </span>
               </div>
             </div>
+            <div v-if="filteredProjects.length" class="batch-bar">
+              <div class="batch-bar-left">
+                <input
+                  id="batch-select-all"
+                  class="card-checkbox"
+                  type="checkbox"
+                  :checked="batchAllSelected"
+                  :indeterminate="batchIndeterminate"
+                  @change="toggleSelectAll"
+                />
+                <span class="batch-bar-label">
+                  {{ t("batch.selected", { count: batchSelectedIds.size }) }}
+                </span>
+              </div>
+              <div v-if="batchSelectedIds.size > 0" class="batch-bar-actions">
+                <button
+                  v-for="category in triageCategories"
+                  :key="`batch-${category}`"
+                  class="triage-chip"
+                  type="button"
+                  :disabled="batchSaving"
+                  @click="batchCategorize(category)"
+                >
+                  {{ translateCategory(category) }}
+                </button>
+                <button
+                  class="triage-chip triage-chip-muted"
+                  type="button"
+                  :disabled="batchSaving"
+                  @click="batchMarkResearch"
+                >
+                  {{ batchSaving ? t("common.loadingShort") : t("triage.markResearch") }}
+                </button>
+              </div>
+            </div>
           </section>
 
           <template v-if="filteredProjects.length">
             <StatsGrid :stats="stats" />
+
+            <section class="toolbar search-toolbar">
+              <input
+                v-model="filters.keyword"
+                class="input search-input"
+                type="search"
+                :placeholder="t('projects.searchPlaceholder')"
+              />
+              <select v-model="filters.sort" class="select sort-select">
+                <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </section>
 
             <section class="toolbar pagination-toolbar">
               <div class="pagination-summary">
@@ -211,11 +300,13 @@
                   :show-triage="isUncategorizedWorkspace"
                   :triage-categories="triageCategories"
                   :triage-saving-id="triageSavingId"
+                  :selected-ids="batchSelectedIds"
                   :format-date="formatDate"
                   :format-number="formatNumber"
                   @detail="openDetail"
                   @quick-category="quickCategorizeProject"
                   @mark-research="markProjectResearch"
+                  @update:selected-ids="batchSelectedIds = $event"
                 />
               </div>
             </Transition>
@@ -246,13 +337,13 @@
             </section>
           </template>
 
-          <section v-else class="empty">
-            <h3>{{ t("projects.noResultsTitle") }}</h3>
-            <p>{{ t("projects.noResultsCopy") }}</p>
-            <div class="admin-actions">
+          <EmptyState v-else icon="search">
+            <template #title>{{ t("projects.noResultsTitle") }}</template>
+            {{ t("projects.noResultsCopy") }}
+            <template #action>
               <button class="ghost-button" type="button" @click="resetBrowseFilters">{{ t("common.resetFilters") }}</button>
-            </div>
-          </section>
+            </template>
+          </EmptyState>
         </div>
       </Transition>
     </main>
@@ -261,9 +352,11 @@
   <ProjectDrawer
     :visible="drawerOpen"
     :project="activeProject"
+    :categories="sidebarCategories"
     :format-date="formatDate"
     :format-number="formatNumber"
     @close="closeDetail"
+    @saved="handleDrawerSaved"
   />
 
   <ChangelogDrawer :visible="changelogOpen" @close="closeChangelog" />
@@ -292,6 +385,7 @@ import {
 } from "./api/projects";
 import AdminPanel from "./components/AdminPanel.vue";
 import ChangelogDrawer from "./components/ChangelogDrawer.vue";
+import EmptyState from "./components/EmptyState.vue";
 import ProjectDrawer from "./components/ProjectDrawer.vue";
 import ProjectGrid from "./components/ProjectGrid.vue";
 import SidebarPanel from "./components/SidebarPanel.vue";
@@ -321,7 +415,7 @@ const filters = reactive({
   status: ALL_STATUS,
   language: ALL_LANGUAGES,
   quick: "",
-  sort: "stars-desc"
+  sort: "starred-desc"
 });
 
 const projects = ref([]);
@@ -337,12 +431,15 @@ const adminMessage = ref("");
 const importMessage = ref("");
 const importRepo = ref("");
 const currentUser = ref(null);
+const loading = ref(true);
 const syncMessage = ref("");
 const syncing = ref(false);
 const reclassifyingRules = ref(false);
 const recheckingRemote = ref(false);
 const removingVisible = ref(false);
 const triageSavingId = ref(null);
+const batchSelectedIds = ref(new Set());
+const batchSaving = ref(false);
 const aiClassificationConfig = ref({ enabled: false, model: "", maxPerRun: 25, includeReadme: false });
 const classifyingAi = ref(false);
 const syncStatus = ref({ lastStarSyncAt: null, recentRuns: [] });
@@ -457,6 +554,12 @@ const sidebarRemoteStatusCounts = computed(() => {
 
 const selectedProject = computed(() => projects.value.find(item => item.id === selectedProjectId.value) || null);
 const isUncategorizedWorkspace = computed(() => isAuthenticated.value && filters.category === UNCATEGORIZED);
+const batchAllSelected = computed(() =>
+  filteredProjects.value.length > 0 && filteredProjects.value.every(item => batchSelectedIds.value.has(item.id))
+);
+const batchIndeterminate = computed(() =>
+  batchSelectedIds.value.size > 0 && !batchAllSelected.value
+);
 const triageCategories = computed(() => {
   const preferred = [
     "AI / LLM",
@@ -482,7 +585,7 @@ const filteredProjects = computed(() => {
     return projects.value;
   }
 
-  return projects.value.filter(item => {
+  let items = projects.value.filter(item => {
     const matchCategory = filters.category === ALL_PROJECTS || item.category === filters.category;
     const matchRemoteStatus = filters.remoteStatus === ALL_REMOTE_STATUS || item.remoteStatus === filters.remoteStatus;
     const matchQuick =
@@ -492,8 +595,30 @@ const filteredProjects = computed(() => {
       (filters.quick === "using" && item.status === "正在使用") ||
       (filters.quick === "research" && item.status === "待研究");
 
-    return matchCategory && matchRemoteStatus && matchQuick;
+    const kw = (filters.keyword || "").toLowerCase().trim();
+    const matchKeyword = !kw ||
+      item.name.toLowerCase().includes(kw) ||
+      item.author.toLowerCase().includes(kw) ||
+      (item.description || "").toLowerCase().includes(kw) ||
+      (Array.isArray(item.tags) && item.tags.some(t => t.toLowerCase().includes(kw)));
+
+    return matchCategory && matchRemoteStatus && matchQuick && matchKeyword;
   });
+
+  const sort = filters.sort || "starred-desc";
+  items = [...items].sort((a, b) => {
+    if (sort === "stars-desc") return (b.stars || 0) - (a.stars || 0);
+    if (sort === "stars-asc") return (a.stars || 0) - (b.stars || 0);
+    if (sort === "name-asc") return (a.name || "").localeCompare(b.name || "");
+    if (sort === "name-desc") return (b.name || "").localeCompare(a.name || "");
+    if (sort === "updated-desc") return (b.updatedAt || "").localeCompare(a.updatedAt || "");
+    if (sort === "updated-asc") return (a.updatedAt || "").localeCompare(b.updatedAt || "");
+    if (sort === "starred-desc") return (b.starredAt || "").localeCompare(a.starredAt || "");
+    if (sort === "starred-asc") return (a.starredAt || "").localeCompare(b.starredAt || "");
+    return 0;
+  });
+
+  return items;
 });
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredProjects.value.length / pageSize.value)));
@@ -522,6 +647,17 @@ const isRemoteFilterActive = computed(() => filters.remoteStatus !== ALL_REMOTE_
 const aiPendingCount = computed(() => projects.value.filter(item => !item.aiCategory).length);
 const aiClassifiedCount = computed(() => projects.value.filter(item => item.aiCategory).length);
 const primarySyncMode = computed(() => (syncStatus.value.lastStarSyncAt ? "incremental" : "full"));
+
+const sortOptions = computed(() => [
+  { value: "starred-desc", label: uiMessage("Star 时间最新", "Starred (Newest)") },
+  { value: "starred-asc", label: uiMessage("Star 时间最早", "Starred (Oldest)") },
+  { value: "updated-desc", label: uiMessage("最近更新", "Recently Updated") },
+  { value: "updated-asc", label: uiMessage("最早更新", "Least Recently Updated") },
+  { value: "stars-desc", label: uiMessage("Stars 从高到低", "Stars (High to Low)") },
+  { value: "stars-asc", label: uiMessage("Stars 从低到高", "Stars (Low to High)") },
+  { value: "name-asc", label: uiMessage("名称 A-Z", "Name A-Z") },
+  { value: "name-desc", label: uiMessage("名称 Z-A", "Name Z-A") }
+]);
 const primarySyncLabel = computed(() => (primarySyncMode.value === "incremental" ? t("signedIn.syncNew") : t("signedIn.syncInitial")));
 const aiButtonLabel = computed(() => aiPendingCount.value > 0 ? t("signedIn.aiButtonPending", { count: aiPendingCount.value }) : t("signedIn.aiButtonRerun"));
 
@@ -659,6 +795,11 @@ async function openDetail(id) {
 
 function closeDetail() {
   drawerOpen.value = false;
+}
+
+function handleDrawerSaved(updated) {
+  replaceProjectInState(updated);
+  syncMessage.value = t("drawer.saveSuccess");
 }
 
 function openChangelog() {
@@ -878,6 +1019,64 @@ async function quickCategorizeProject({ id, category }) {
   }
 }
 
+function toggleSelectAll() {
+  if (batchAllSelected.value) {
+    batchSelectedIds.value = new Set();
+  } else {
+    batchSelectedIds.value = new Set(filteredProjects.value.map(item => item.id));
+  }
+}
+
+async function batchCategorize(category) {
+  const ids = [...batchSelectedIds.value];
+  if (!ids.length) return;
+
+  batchSaving.value = true;
+  syncMessage.value = "";
+
+  for (const id of ids) {
+    const project = projects.value.find(item => item.id === id);
+    if (!project) continue;
+
+    try {
+      const updated = await updateProject(id, buildProjectPayload(project, { category }));
+      replaceProjectInState(updated);
+    } catch {
+      // continue with next
+    }
+  }
+
+  batchSelectedIds.value = new Set();
+  batchSaving.value = false;
+  syncMessage.value = t("triage.batchDone", { count: ids.length });
+  await loadMeta();
+}
+
+async function batchMarkResearch() {
+  const ids = [...batchSelectedIds.value];
+  if (!ids.length) return;
+
+  batchSaving.value = true;
+  syncMessage.value = "";
+
+  for (const id of ids) {
+    const project = projects.value.find(item => item.id === id);
+    if (!project) continue;
+
+    try {
+      const updated = await updateProject(id, buildProjectPayload(project, { status: "待研究" }));
+      replaceProjectInState(updated);
+    } catch {
+      // continue with next
+    }
+  }
+
+  batchSelectedIds.value = new Set();
+  batchSaving.value = false;
+  syncMessage.value = t("triage.batchResearchDone", { count: ids.length });
+  await loadMeta();
+}
+
 async function markProjectResearch(id) {
   const project = projects.value.find(item => item.id === id);
   if (!project) {
@@ -1095,5 +1294,6 @@ onMounted(async () => {
     await loadProjects();
     await loadSyncStatus();
   }
+  loading.value = false;
 });
 </script>

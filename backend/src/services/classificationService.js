@@ -50,6 +50,19 @@ function matchFromRules(values, rules, source) {
   return null;
 }
 
+function matchFromUserRules(values, rules, source) {
+  for (const rule of rules) {
+    if (values.includes(rule.matchValue)) {
+      return {
+        category: rule.targetCategory,
+        categorySource: `user_${source}`,
+        categoryReason: `user_rule:${rule.matchValue}`
+      };
+    }
+  }
+  return null;
+}
+
 function findKeywordMatch(haystack) {
   for (const rule of keywordRules) {
     const matchedKeyword = rule.values.find(keyword => {
@@ -69,8 +82,31 @@ function findKeywordMatch(haystack) {
   return null;
 }
 
-export function classifyRepositoryDetailed(repo) {
+function findUserKeywordMatch(haystack, userRules) {
+  for (const rule of userRules) {
+    const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(rule.matchValue)}([^a-z0-9]|$)`, "i");
+    if (pattern.test(haystack)) {
+      return {
+        category: rule.targetCategory,
+        categorySource: "user_keyword",
+        categoryReason: `user_rule:${rule.matchValue}`
+      };
+    }
+  }
+  return null;
+}
+
+export function classifyRepositoryDetailed(repo, userRules = []) {
   const topics = normalizeTopics(repo.tags || []);
+  const userTopicRules = userRules.filter(r => r.matchType === "topic");
+
+  // User topic rules first
+  const userTopicMatch = matchFromUserRules(topics, userTopicRules, "topic");
+  if (userTopicMatch) {
+    return userTopicMatch;
+  }
+
+  // Built-in topic rules
   const topicMatch = matchFromRules(topics, topicRules, CATEGORY_SOURCE.topic);
   if (topicMatch) {
     return topicMatch;
@@ -81,6 +117,15 @@ export function classifyRepositoryDetailed(repo) {
     .map(item => normalizeText(item))
     .join(" ");
 
+  // User keyword rules
+  const userKeywordRules = userRules.filter(r => r.matchType === "keyword");
+  if (haystack.trim()) {
+    const userKeywordMatch = findUserKeywordMatch(haystack, userKeywordRules);
+    if (userKeywordMatch) {
+      return userKeywordMatch;
+    }
+  }
+
   if (haystack.trim()) {
     const keywordMatch = findKeywordMatch(haystack);
     if (keywordMatch) {
@@ -88,8 +133,16 @@ export function classifyRepositoryDetailed(repo) {
     }
   }
 
+  const userLanguageRules = userRules.filter(r => r.matchType === "language");
   const normalizedLanguage = normalizeText(repo.language);
+
   if (normalizedLanguage) {
+    // User language rules first
+    const userLangMatch = matchFromUserRules([normalizedLanguage], userLanguageRules, "language");
+    if (userLangMatch) {
+      return userLangMatch;
+    }
+
     const languageMatch = matchFromRules([normalizedLanguage], languageRules, CATEGORY_SOURCE.languageFallback);
     if (languageMatch) {
       return languageMatch;
@@ -111,6 +164,6 @@ export function classifyRepositoryDetailed(repo) {
   };
 }
 
-export function classifyRepository(repo) {
-  return classifyRepositoryDetailed(repo).category;
+export function classifyRepository(repo, userRules = []) {
+  return classifyRepositoryDetailed(repo, userRules).category;
 }

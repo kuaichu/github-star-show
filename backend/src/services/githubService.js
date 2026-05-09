@@ -137,6 +137,53 @@ export async function inspectRepositoryState(repoInput, accessToken = "") {
   };
 }
 
+export async function fetchLatestRelease(owner, repo, accessToken = "") {
+  const baseUrl = process.env.GITHUB_API_BASE_URL || "https://api.github.com";
+  const url = `${baseUrl}/repos/${owner}/${repo}/releases/latest`;
+
+  try {
+    const response = await fetch(url, {
+      headers: buildGithubHeaders(accessToken)
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.published_at || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchLatestCommit(owner, repo, accessToken = "") {
+  const baseUrl = process.env.GITHUB_API_BASE_URL || "https://api.github.com";
+  const url = `${baseUrl}/repos/${owner}/${repo}/commits?per_page=1`;
+
+  try {
+    const response = await fetch(url, {
+      headers: buildGithubHeaders(accessToken)
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    const commitDate = data[0]?.commit?.author?.date || data[0]?.commit?.committer?.date;
+    return commitDate || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function isRepositoryStarred(accessToken, repoInput) {
   const { owner, repo } = parseRepoInput(repoInput);
   const baseUrl = process.env.GITHUB_API_BASE_URL || "https://api.github.com";

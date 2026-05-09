@@ -5,6 +5,7 @@ import authRouter from "./routes/auth.js";
 import categoriesRouter from "./routes/categories.js";
 import githubRouter from "./routes/github.js";
 import projectsRouter from "./routes/projects.js";
+import rulesRouter from "./routes/rules.js";
 import syncRouter from "./routes/sync.js";
 import { getSessionUser } from "./lib/sessionStore.js";
 import { getMeta } from "./services/projectService.js";
@@ -44,6 +45,7 @@ app.use("/auth", authRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/github", githubRouter);
 app.use("/api/projects", projectsRouter);
+app.use("/api/rules", rulesRouter);
 app.use("/api/sync", syncRouter);
 
 export default app;
