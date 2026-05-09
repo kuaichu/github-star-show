@@ -283,10 +283,15 @@
                 <p class="toolbar-tip">{{ t("pagination.showingRange", { start: pageStart, end: pageEnd, total: filteredProjects.length }) }}</p>
               </div>
               <div class="pagination-settings">
-                <label class="pagination-size-label" for="page-size">{{ t("pagination.perPage") }}</label>
-                <select id="page-size" v-model.number="pageSize" class="select pagination-size-select">
-                  <option v-for="size in PAGE_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
-                </select>
+                <label class="pagination-size-label">{{ t("pagination.perPage") }}</label>
+                <div ref="pageSizeRef" class="select pagination-size-select page-size-dropdown" :class="{ open: showPageSize }">
+                  <button class="page-size-trigger" type="button" @click="showPageSize = !showPageSize">
+                    <span>{{ pageSize }}</span><span class="more-actions-arrow">▾</span>
+                  </button>
+                  <div v-if="showPageSize" class="page-size-menu">
+                    <button v-for="size in PAGE_SIZE_OPTIONS" :key="size" type="button" class="page-size-option" :class="{ active: pageSize === size }" @click="selectPageSize(size)">{{ size }}</button>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -436,6 +441,8 @@ const syncMessage = ref("");
 const syncing = ref(false);
 const showMore = ref(false);
 const moreActionsRef = ref(null);
+const showPageSize = ref(false);
+const pageSizeRef = ref(null);
 const reclassifyingRules = ref(false);
 const recheckingRemote = ref(false);
 const removingVisible = ref(false);
@@ -1298,6 +1305,24 @@ watch(showMore, (open) => {
     document.addEventListener("click", handler, true);
     const cleanup = () => document.removeEventListener("click", handler, true);
     const unwatch = watch(() => showMore.value, (val) => { if (!val) { cleanup(); unwatch(); } });
+  }
+});
+
+function selectPageSize(size) {
+  pageSize.value = size;
+  showPageSize.value = false;
+}
+
+watch(showPageSize, (open) => {
+  if (open) {
+    const handler = (e) => {
+      if (pageSizeRef.value && !pageSizeRef.value.contains(e.target)) {
+        showPageSize.value = false;
+      }
+    };
+    document.addEventListener("click", handler, true);
+    const cleanup = () => document.removeEventListener("click", handler, true);
+    const unwatch = watch(() => showPageSize.value, (val) => { if (!val) { cleanup(); unwatch(); } });
   }
 });
 
