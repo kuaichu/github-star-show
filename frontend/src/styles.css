@@ -2184,3 +2184,46 @@ body::after {
     min-width: 0;
   }
 }
+
+@media (max-width: 600px) {
+  .main {
+    padding: 12px;
+  }
+
+  .hero-panel {
+    padding: 16px;
+  }
+
+  .hero-title {
+    font-size: 26px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .card h3 {
+    font-size: 18px;
+  }
+
+  .card-description {
+    min-height: auto;
+  }
+
+  .card-section {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .card-actions {
+    margin-top: 12px;
+  }
+
+  .chip {
+    height: 26px;
+    min-height: 26px;
+    font-size: 11px;
+    padding: 0 10px;
+  }
+}
