@@ -132,3 +132,27 @@ export function runAiClassification(payload = {}) {
     body: JSON.stringify(payload)
   });
 }
+
+export function getManagedCategories() {
+  return request("/categories/managed");
+}
+
+export function createManagedCategory(name) {
+  return request("/categories/managed", {
+    method: "POST",
+    body: JSON.stringify({ name })
+  });
+}
+
+export function renameManagedCategory(oldName, newName) {
+  return request(`/categories/managed/${encodeURIComponent(oldName)}`, {
+    method: "PUT",
+    body: JSON.stringify({ newName })
+  });
+}
+
+export function deleteManagedCategory(name) {
+  return request(`/categories/managed/${encodeURIComponent(name)}`, {
+    method: "DELETE"
+  });
+}

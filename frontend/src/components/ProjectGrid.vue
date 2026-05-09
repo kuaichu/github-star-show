@@ -37,6 +37,36 @@
             <p class="project-note">{{ item.note }}</p>
           </div>
 
+          <div v-if="showTriage" class="card-section triage-section">
+            <div class="triage-head">
+              <strong>{{ t("triage.quickCategories") }}</strong>
+              <span class="card-meta">{{ t("triage.source", { value: item.categoryReason || item.categorySource || "-" }) }}</span>
+            </div>
+            <p v-if="item.language && languageHints[item.language]" class="triage-hint">
+              {{ t("triage.langHint") }} {{ languageHints[item.language].map(c => translateCategory(c)).join("、") }}
+            </p>
+            <div class="triage-actions">
+              <button
+                v-for="category in triageCategories"
+                :key="`${item.id}-${category}`"
+                class="triage-chip"
+                type="button"
+                :disabled="triageSavingId === item.id"
+                @click="$emit('quick-category', { id: item.id, category })"
+              >
+                {{ translateCategory(category) }}
+              </button>
+              <button
+                class="triage-chip triage-chip-muted"
+                type="button"
+                :disabled="triageSavingId === item.id"
+                @click="$emit('mark-research', item.id)"
+              >
+                {{ triageSavingId === item.id ? t("triage.saving") : t("triage.markResearch") }}
+              </button>
+            </div>
+          </div>
+
           <div v-if="item.tags.length" class="chip-row card-tags">
             <span v-for="tag in item.tags" :key="tag" class="chip">{{ tag }}</span>
           </div>
@@ -59,14 +89,38 @@
 <script setup>
 import { t, translateCategory, translateRemoteStatus, translateStatus } from "../i18n";
 
+const languageHints = {
+  Python: ["AI / LLM", "自动化 / 效率工具", "安全 / CTF"],
+  PHP: ["前端 UI / 可视化", "运维 / 自建服务"],
+  "C#": ["媒体 / 下载 / 图床", "运维 / 自建服务"],
+  "C++": ["AI / LLM", "媒体 / 下载 / 图床", "自动化 / 效率工具"],
+  "C": ["自动化 / 效率工具", "安全 / CTF", "网络 / NAS / 虚拟化"],
+  Kotlin: ["前端 UI / 可视化", "自动化 / 效率工具"],
+  Go: ["网络 / NAS / 虚拟化", "运维 / 自建服务", "自动化 / 效率工具"],
+  Rust: ["自动化 / 效率工具", "安全 / CTF"],
+  Java: ["前端 UI / 可视化", "运维 / 自建服务"],
+  Ruby: ["运维 / 自建服务", "自动化 / 效率工具"],
+  Swift: ["前端 UI / 可视化", "自动化 / 效率工具"],
+  Dart: ["前端 UI / 可视化", "自动化 / 效率工具"],
+  Lua: ["媒体 / 下载 / 图床", "自动化 / 效率工具"],
+  Zig: ["自动化 / 效率工具", "安全 / CTF"],
+  Haskell: ["AI / LLM", "自动化 / 效率工具"],
+  R: ["AI / LLM", "自动化 / 效率工具"],
+  Scala: ["AI / LLM", "运维 / 自建服务"],
+  Objective_C: ["前端 UI / 可视化", "自动化 / 效率工具"]
+};
+
 defineProps({
   projects: { type: Array, default: () => [] },
   totalCount: { type: Number, default: 0 },
   rangeLabel: { type: String, default: "" },
   title: { type: String, default: "" },
+  showTriage: { type: Boolean, default: false },
+  triageCategories: { type: Array, default: () => [] },
+  triageSavingId: { type: Number, default: null },
   formatDate: { type: Function, required: true },
   formatNumber: { type: Function, required: true }
 });
 
-defineEmits(["detail"]);
+defineEmits(["detail", "quick-category", "mark-research"]);
 </script>

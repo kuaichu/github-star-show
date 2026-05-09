@@ -27,6 +27,35 @@
       <p v-if="importMessage" class="admin-message">{{ importMessage }}</p>
     </div>
 
+    <details class="admin-category-management">
+      <summary class="admin-category-summary">
+        <h3>{{ t("admin.categoryManagement") }}</h3>
+      </summary>
+      <p class="admin-category-copy">{{ t("admin.categoryManagementCopy") }}</p>
+
+      <div v-if="managedCategories.length" class="admin-category-group">
+        <div v-for="cat in managedCategories" :key="cat.id" class="admin-category-row">
+          <span class="chip brand">{{ cat.name }}</span>
+          <div class="admin-category-row-actions">
+            <button class="ghost-button" type="button" @click="openRenameModal(cat)">{{ t("admin.renameCategory") }}</button>
+            <button class="danger-button-small" type="button" @click="openDeleteCategoryModal(cat)">{{ t("admin.deleteCategory") }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-category-add">
+        <input
+          v-model="newCategoryName"
+          class="input"
+          type="text"
+          :placeholder="t('admin.addCategoryPlaceholder')"
+          @keyup.enter="addCategory"
+        />
+        <button class="button" type="button" :disabled="!newCategoryName.trim()" @click="addCategory">{{ t("admin.addCategory") }}</button>
+      </div>
+      <p v-if="categoryMessage" class="admin-message">{{ categoryMessage }}</p>
+    </details>
+
     <div class="admin-layout">
       <aside class="admin-list">
         <div class="admin-list-head">
@@ -203,12 +232,47 @@
         </div>
       </div>
     </Transition>
+
+    <Transition name="admin-modal">
+      <div v-if="showDeleteCategoryModal" class="modal-mask" @click.self="closeDeleteCategoryModal">
+        <div class="confirm-modal">
+          <div class="eyebrow">{{ t("admin.deleteCategory") }}</div>
+          <h3>{{ t("admin.confirmDeleteCategory", { name: categoryToDelete?.name || "" }) }}</h3>
+          <div class="admin-actions">
+            <button class="danger-button" type="button" @click="confirmDeleteCategory">{{ t("admin.confirmRemove") }}</button>
+            <button class="ghost-button" type="button" @click="closeDeleteCategoryModal">{{ t("admin.cancel") }}</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition name="admin-modal">
+      <div v-if="showRenameModal" class="modal-mask" @click.self="closeRenameModal">
+        <div class="confirm-modal">
+          <div class="eyebrow">{{ t("admin.renameModalTitle") }}</div>
+          <label>
+            <span>{{ t("admin.renameModalNewName") }}</span>
+            <input v-model="renameCategoryName" class="input" type="text" @keyup.enter="confirmRenameCategory" />
+          </label>
+          <div class="admin-actions">
+            <button class="button" type="button" :disabled="!renameCategoryName.trim()" @click="confirmRenameCategory">{{ t("admin.renameCategory") }}</button>
+            <button class="ghost-button" type="button" @click="closeRenameModal">{{ t("admin.cancelRename") }}</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
 <script setup>
 import { computed, ref, watch } from "vue";
 import { locale, t, translateCategory, translateStatus } from "../i18n";
+import {
+  getManagedCategories,
+  createManagedCategory,
+  renameManagedCategory,
+  deleteManagedCategory
+} from "../api/projects.js";
 
 const props = defineProps({
   projects: { type: Array, default: () => [] },
@@ -222,7 +286,8 @@ const props = defineProps({
   message: String,
   importRepo: String,
   importMessage: String,
-  canManageStars: Boolean
+  canManageStars: Boolean,
+  managedCategories: { type: Array, default: () => [] }
 });
 
 const emit = defineEmits([
@@ -236,7 +301,8 @@ const emit = defineEmits([
   "import-repo",
   "update:features-text",
   "update:tags-text",
-  "update:import-repo"
+  "update:import-repo",
+  "refresh-categories"
 ]);
 
 const ADMIN_ALL_CATEGORIES = "all";
@@ -245,8 +311,16 @@ const showDeleteModal = ref(false);
 const unstarOnGithub = ref(false);
 const adminCategoryFilter = ref(ADMIN_ALL_CATEGORIES);
 
+const newCategoryName = ref("");
+const categoryMessage = ref("");
+const showDeleteCategoryModal = ref(false);
+const categoryToDelete = ref(null);
+const showRenameModal = ref(false);
+const categoryToRename = ref(null);
+const renameCategoryName = ref("");
+
 const editorKey = computed(() => (props.selectedProject?.id ? `project-${props.selectedProject.id}` : "create-project"));
-const categoryOptions = computed(() => props.categories.filter(item => item && item !== "全部项目"));
+const categoryOptions = computed(() => props.categories.filter(item => item && item !== "全部项目" && item !== "__all_projects__"));
 const categoryFieldHelp = computed(() =>
   locale.value === "zh-CN"
     ? "可直接输入自定义分类，也可以从现有分类中选择。"
@@ -298,5 +372,65 @@ function confirmDelete() {
     unstarOnGithub: Boolean(unstarOnGithub.value && props.canManageStars)
   });
   closeDeleteModal();
+}
+
+async function addCategory() {
+  const name = newCategoryName.value.trim();
+  if (!name) {
+    categoryMessage.value = t("admin.categoryNameRequired");
+    return;
+  }
+  try {
+    await createManagedCategory(name);
+    newCategoryName.value = "";
+    categoryMessage.value = "";
+    emit("refresh-categories");
+  } catch (err) {
+    categoryMessage.value = err.message || t("admin.categoryExists");
+  }
+}
+
+function openDeleteCategoryModal(cat) {
+  categoryToDelete.value = cat;
+  showDeleteCategoryModal.value = true;
+}
+
+function closeDeleteCategoryModal() {
+  categoryToDelete.value = null;
+  showDeleteCategoryModal.value = false;
+}
+
+async function confirmDeleteCategory() {
+  if (!categoryToDelete.value) return;
+  try {
+    await deleteManagedCategory(categoryToDelete.value.name);
+    closeDeleteCategoryModal();
+    emit("refresh-categories");
+  } catch (err) {
+    categoryMessage.value = err.message || t("admin.categoryDeleteFailed");
+  }
+}
+
+function openRenameModal(cat) {
+  categoryToRename.value = cat;
+  renameCategoryName.value = cat.name;
+  showRenameModal.value = true;
+}
+
+function closeRenameModal() {
+  categoryToRename.value = null;
+  renameCategoryName.value = "";
+  showRenameModal.value = false;
+}
+
+async function confirmRenameCategory() {
+  if (!categoryToRename.value || !renameCategoryName.value.trim()) return;
+  try {
+    await renameManagedCategory(categoryToRename.value.name, renameCategoryName.value.trim());
+    closeRenameModal();
+    emit("refresh-categories");
+  } catch (err) {
+    categoryMessage.value = err.message || t("admin.categoryRenameFailed");
+  }
 }
 </script>

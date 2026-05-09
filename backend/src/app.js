@@ -2,10 +2,13 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import authRouter from "./routes/auth.js";
+import categoriesRouter from "./routes/categories.js";
 import githubRouter from "./routes/github.js";
 import projectsRouter from "./routes/projects.js";
 import syncRouter from "./routes/sync.js";
+import { getSessionUser } from "./lib/sessionStore.js";
 import { getMeta } from "./services/projectService.js";
+import { getAllCategories } from "./services/categoryService.js";
 
 dotenv.config();
 
@@ -26,11 +29,19 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.get("/api/meta", async (_req, res) => {
-  res.json(await getMeta());
+app.get("/api/meta", async (req, res) => {
+  const meta = await getMeta();
+  const user = await getSessionUser(req);
+  const allCategories = await getAllCategories(user?.dbUserId);
+  const merged = [...new Set([...allCategories, ...meta.categories.filter(c => c !== "全部项目")])];
+  res.json({
+    ...meta,
+    categories: ["全部项目", ...merged]
+  });
 });
 
 app.use("/auth", authRouter);
+app.use("/api/categories", categoriesRouter);
 app.use("/api/github", githubRouter);
 app.use("/api/projects", projectsRouter);
 app.use("/api/sync", syncRouter);

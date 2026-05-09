@@ -46,6 +46,7 @@ model User {
   sessions       Session[]
   userProjects   UserProject[]
   syncRuns       SyncRun[]
+  categories     ManagedCategory[]
 }
 
 model GithubAccount {
@@ -106,4 +107,14 @@ model SyncRun {
   total     Int      @default(0)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ManagedCategory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
 }

@@ -1,160 +1,118 @@
 # GitHub Star Show
 
-Turn GitHub Stars into a maintainable personal open-source library.
+把 GitHub Stars 变成一个可整理、可维护、可自托管的个人开源项目库。
 
-`GitHub Star Show` is a self-hostable web app that lets users sign in with GitHub, sync their starred repositories, organize them into a personal project library, and keep that library separated by user account instead of showing one shared demo list.
+`GitHub Star Show` 是一个面向 GitHub Star 工作流的自托管 Web 应用。用户可以使用 GitHub 登录，拉取自己的 Star 仓库，同步到本地数据库中，再继续做分类、备注、状态管理和远端状态跟踪，而不是把 Star 永远埋在 GitHub 的长列表里。
 
-## Live Demo
+## 在线 Demo
 
-- Demo site: [https://stars.yeque.top](https://stars.yeque.top)
-- Frontend: Cloudflare Pages
-- Backend: self-hosted Express + Prisma service
+- 演示地址：[https://stars.yeque.top](https://stars.yeque.top)
+- 当前公开版本：`v0.1.0-beta.2`
+- 当前定位：公开测试用 demo，未来主形态是“用户自部署到自己的服务器”
 
-## What It Does
+## 当前已经支持的功能
 
-- Sign in with GitHub OAuth
-- Sync each user's own starred repositories
-- Persist user-specific project libraries in the database
-- Organize projects with rule-based categories
-- Track remote states such as `unstarred`, `archived`, and `missing`
-- Edit notes, status, links, and user-level metadata in an admin panel
-- Support incremental sync and manual full re-sync
-- Keep AI classification optional instead of making it a hard dependency
+### 认证与用户隔离
 
-## Product Positioning
+- GitHub OAuth 登录
+- 持久化会话
+- 按用户隔离的数据视图
+- 同一个仓库可以被多个用户同时收藏，但彼此的备注、分类和状态互不覆盖
 
-This project is not trying to replace GitHub, Notion, or a generic bookmark manager.
+### 同步能力
 
-It is focused on one workflow:
+- 首次全量同步 GitHub Stars
+- 后续默认增量同步
+- 手动执行全量重同步
+- 同步记录与最近同步时间展示
+- 支持从本地删除项目时，可选同时在 GitHub 上取消 Star
 
-1. Use GitHub Stars as the collection entry point
-2. Sync repositories into your own system
-3. Continue organizing them as a long-lived personal open-source library
+### 本地项目库
 
-The key idea is:
+- 将 GitHub Star 落库存储
+- 项目卡片展示、分页、筛选、详情抽屉
+- 项目详情支持 README 预览
+- 管理后台支持编辑项目元信息
+- 支持手动导入单个 GitHub 仓库
 
-> GitHub Stars should not disappear into a long list. They should become a library you can maintain.
+### 分类与整理
 
-## Current Capabilities
+- 默认规则分类
+- 分类导航
+- 支持自定义分类
+- 自定义分类保存后，左侧分类导航会立即刷新
+- 默认分类顺序保持稳定，自定义分类追加在默认分类之后
 
-### Authentication
-
-- GitHub OAuth login
-- Persistent database-backed sessions
-- User/account binding through `users`, `github_accounts`, and `sessions`
-
-### Sync
-
-- First sync runs in full mode
-- Later syncs default to incremental mode
-- Manual full re-sync remains available
-- Recent sync runs and last sync time are stored
-
-### User Library
-
-- User data is isolated by account
-- Shared repository metadata is stored globally
-- User-level overrides are stored separately
-- The same repository can appear in multiple users' libraries without mixing notes or categories
-
-### Classification
-
-- Rule-based categorization is enabled by default
-- Uses repository name, description, language, and topics
-- Categories currently include:
-  - `AI / LLM`
-  - `Automation / Productivity`
-  - `Frontend UI / Visualization`
-  - `Media / Download / Image Hosting`
-  - `Network / NAS / Virtualization`
-  - `Ops / Self-hosted Services`
-  - `Security / CTF`
-  - `Uncategorized / Review`
-
-### Remote State Tracking
+### 远端状态感知
 
 - `active`
 - `unstarred`
 - `archived`
 - `missing`
 
-These states are kept as user-level sync facts, so the app can preserve local notes and categorization even when the remote GitHub state changes.
+系统不会因为远端状态变化就直接删除本地记录，而是优先保留本地整理结果，并通过状态标签提示用户处理。
 
-### Admin
+### 后台管理
 
-- Create local projects
-- Edit category, note, links, status, tags, and features
-- Import a single repository by `owner/repo`
-- Remove a project from the local library
-- Optionally unstar it on GitHub during deletion
+- 创建本地项目
+- 编辑分类、备注、标签、状态、链接
+- 新建项目时支持退出新建态
+- 返回展示页后再次进入后台，不会卡在空白新建表单
 
-## Tech Stack
+### 体验与界面
 
-### Frontend
+- 中英文切换
+- 更新记录抽屉
+- 版本信息与技术栈说明
+- 轻量动画与更统一的深色界面风格
+
+## 当前技术栈
+
+### 前端
 
 - Vue 3
 - Vite
-- Plain CSS
+- 原生 CSS
 
-### Backend
+### 后端
 
 - Express
 - Prisma
 - SQLite
 
-## Architecture Summary
+### 当前演示部署
 
-The data model intentionally separates shared repository metadata from user-specific organization:
+- 前端：Cloudflare Pages
+- 后端：1Panel 自托管
+- 进程守护：PM2
+
+## 数据模型概览
+
+项目当前的核心数据拆分如下：
 
 - `Project`
-  - Global repository record
-  - One shared source of truth for repo metadata
+  - 全局仓库元数据
+  - 共享的 GitHub 仓库基础事实
 
 - `UserProject`
-  - Per-user relationship to a project
-  - Stores category, note, status, tags, feature overrides, remote state, and sync timestamps
+  - 用户与仓库的关系表
+  - 保存用户自己的分类、备注、状态、远端状态等
 
 - `User`
-  - Local application user
+  - 本地应用用户
 
 - `GithubAccount`
-  - GitHub identity, token, scope, and profile mapping
+  - GitHub 身份映射、授权信息、能力边界
 
 - `Session`
-  - Persistent login session
+  - 持久化登录会话
 
 - `SyncRun`
-  - Sync history for status tracking
+  - 同步历史
 
-This lets multiple users share repository records while keeping their own library curation separate.
+## 本地开发
 
-## Screenshots
-
-Recommended screenshots to place here for the public repository:
-
-- Guest homepage
-- Signed-in homepage after sync
-- Admin panel
-- Project detail drawer with README preview
-
-Suggested folder:
-
-```text
-docs/screenshots/
-```
-
-Suggested README image blocks after you export screenshots:
-
-```md
-![Guest homepage](docs/screenshots/guest-home.png)
-![Signed-in dashboard](docs/screenshots/user-dashboard.png)
-![Admin panel](docs/screenshots/admin-panel.png)
-![Project details](docs/screenshots/project-detail.png)
-```
-
-## Local Development
-
-### 1. Install dependencies
+### 1. 安装依赖
 
 ```bash
 cd backend
@@ -166,11 +124,9 @@ cd frontend
 npm install
 ```
 
-### 2. Configure backend environment
+### 2. 配置后端环境变量
 
-Create `backend/.env` from `backend/.env.example`.
-
-Example local configuration:
+从 `backend/.env.example` 复制生成 `backend/.env`，示例：
 
 ```env
 DATABASE_URL="file:./dev.db"
@@ -191,7 +147,7 @@ AI_CLASSIFICATION_MAX_PER_RUN="25"
 AI_CLASSIFICATION_INCLUDE_README="false"
 ```
 
-### 3. Initialize the database
+### 3. 初始化数据库
 
 ```bash
 cd backend
@@ -199,96 +155,64 @@ npx prisma generate
 npx prisma db push
 ```
 
-### 4. Start the backend
+### 4. 启动后端
 
 ```bash
 cd backend
 npm run dev
 ```
 
-### 5. Start the frontend
+### 5. 启动前端
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-## Deployment
+## 当前已知边界
 
-This repository is currently deployed as:
+- AI 分类仍然是可选增强，默认关闭
+- 规则分类仍有继续扩展空间，未分类项目还偏多
+- 自动化定时全量同步还未接入
+- 测试体系还没有系统补齐
+- README 截图区仍待正式整理
 
-- Frontend: Cloudflare Pages
-- Frontend domain: `https://stars.yeque.top`
-- Backend: self-hosted on 1Panel
-- Backend base path: `https://api.yeque.top:9000/githubstarshow`
+## 下一步可以继续做什么
 
-### Frontend environment variables
+### 优先级最高
 
-Set these in Cloudflare Pages:
+- 规则分类重构与配置化
+- 分类依据可解释化（`source` / `reason`）
+- 手动分类保护
+- 降低“未分类 / 待整理”的比例
 
-```env
-VITE_API_BASE_URL=https://api.yeque.top:9000/githubstarshow/api
-VITE_AUTH_BASE_URL=https://api.yeque.top:9000/githubstarshow/auth
-```
+### 第二优先级
 
-### Backend environment variables
+- 后台整理效率增强
+- 搜索、排序、批量处理
+- 未分类项目专门整理视图
 
-Example production shape:
+### 第三优先级
 
-```env
-DATABASE_URL="file:./data/dev.db"
-PORT=3000
+- 自部署友好性补强
+- 更完整的 `.env.example`
+- 面向外部用户的部署文档
+- 升级流程说明
 
-CLIENT_ORIGIN="https://stars.yeque.top"
-APP_BASE_URL="https://stars.yeque.top"
-BACKEND_BASE_URL="https://api.yeque.top:9000/githubstarshow"
+### 暂缓项
 
-GITHUB_API_BASE_URL="https://api.github.com"
-GITHUB_CLIENT_ID="your-client-id"
-GITHUB_CLIENT_SECRET="your-client-secret"
+- 本地 NLP 分类器
+- AI 批处理分类
+- 更重的智能增强能力
 
-OPENAI_API_KEY=""
-OPENAI_API_BASE_URL="https://api.openai.com/v1"
-OPENAI_MODEL="gpt-4o-mini"
-AI_CLASSIFICATION_ENABLED="false"
-AI_CLASSIFICATION_MAX_PER_RUN="25"
-AI_CLASSIFICATION_INCLUDE_README="false"
-```
+## 项目定位
 
-### Reverse proxy routing
+这个项目不是：
 
-If you deploy behind a shared API gateway, make sure:
+- GitHub 的镜像站
+- 通用书签管理器
+- AI 驱动的知识库
 
-- `/githubstarshow/api/*` is forwarded to `/api/*`
-- `/githubstarshow/auth/*` is forwarded to `/auth/*`
+它是：
 
-The `/githubstarshow` prefix should be removed before the request reaches Express.
-
-### GitHub OAuth
-
-Recommended GitHub OAuth App settings for the current demo:
-
-- Homepage URL:
-  - `https://stars.yeque.top`
-- Authorization callback URL:
-  - `https://api.yeque.top:9000/githubstarshow/auth/github/callback`
-
-## Known Limits
-
-- No automated weekly full re-sync scheduler yet
-- No test suite yet
-- AI classification is optional and disabled by default
-- README screenshots are still waiting for final exported images
-
-## Release Status
-
-Recommended first public tag:
-
-- `v0.1.0-beta.1`
-
-Why this version:
-
-- Core login + sync + persistence flow is working
-- Multi-user isolation is in place
-- The app is already usable as a real demo
-- There is still room to improve tests, scheduler automation, and polish
+> 一个把 GitHub Stars 转化为可长期整理、可持续同步、可自托管维护的个人开源项目库。

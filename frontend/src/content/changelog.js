@@ -19,8 +19,8 @@ export const CHANGELOG_CONTENT = {
     close: "关闭",
     currentVersion: {
       heading: "当前版本",
-      version: "v0.1.0-beta.2",
-      summary: "新增后台新增自定义分类支持，修复开发中遇到的一些逻辑问题",
+      version: "v0.1.0-beta.3",
+      summary: "分类规则扩充，分类管理重构，修复已知Bug",
       badge: "Beta"
     },
     capabilities: {
@@ -39,6 +39,16 @@ export const CHANGELOG_CONTENT = {
     changelog: {
       heading: "更新历史",
       releases: [
+	  {
+          version: "v0.1.0-beta.3",
+          date: "2026-05-09",
+          badge: "功能更新",
+          items: [
+            "分类规则扩充",
+            "修复English下的已知Bug",
+            "分类管理重构为为按用户隔离"
+          ]
+        },
         {
           version: "v0.1.0-beta.2",
           date: "2026-05-08",
@@ -97,8 +107,8 @@ export const CHANGELOG_CONTENT = {
     close: "Close",
     currentVersion: {
       heading: "Current Version",
-      version: "v0.1.0-beta.1",
-      summary: "This is the first public beta demo focused on user-scoped GitHub star sync and local library management.",
+      version: "v0.1.0-beta.3",
+      summary: "The classification rules were expanded, the classification management system was restructured, and known bugs were fixed.",
       badge: "Beta"
     },
     capabilities: {
@@ -117,6 +127,28 @@ export const CHANGELOG_CONTENT = {
     changelog: {
       heading: "Changelog",
       releases: [
+	    {
+          version: "v0.1.0-beta.3",
+          date: "2026-05-09",
+          badge: "Feature Update",
+          items: [
+            "Expanded Category Rules",
+			"Fixed Known Bugs in English",
+			"Restructured Category Management to be Isolated by User"
+          ]
+        },
+	    {
+          version: "v0.1.0-beta.2",
+          date: "2026-05-08",
+          badge: "Feature Update",
+          items: [
+            "Added support for custom categories in Admin",
+            "Sidebar category navigation now updates immediately after saving category changes",
+            "Preserved default category ordering while appending custom categories after built-in ones",
+            "Fixed Admin create-mode lock-in issue — added exit without saving",
+            "Fixed returning to Admin reopening the empty create form"
+          ]
+        },
         {
           version: "v0.1.0-beta.1",
           date: "2026-05-08",
@@ -128,18 +160,6 @@ export const CHANGELOG_CONTENT = {
             "Added remote state tracking for unstarred and archived repositories",
             "Added admin editing, import, and optional GitHub unstar on delete",
             "Deployed frontend and backend as a public demo"
-          ]
-        },
-        {
-          version: "v0.1.1",
-          date: "2026-05-08",
-          badge: "Feature Update",
-          items: [
-            "Added support for custom categories in Admin",
-            "Sidebar category navigation now updates immediately after saving category changes",
-            "Preserved default category ordering while appending custom categories after built-in ones",
-            "Fixed Admin create-mode lock-in issue — added exit without saving",
-            "Fixed returning to Admin reopening the empty create form"
           ]
         },
         {

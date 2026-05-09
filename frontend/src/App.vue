@@ -45,6 +45,7 @@
             :message="adminMessage"
             :import-repo="importRepo"
             :import-message="importMessage"
+            :managed-categories="categoryList"
             @close="closeAdmin"
             @create="startCreateProject"
             @select="selectProjectForEdit"
@@ -56,6 +57,7 @@
             @update:import-repo="importRepo = $event"
             @update:features-text="featuresText = $event"
             @update:tags-text="tagsText = $event"
+            @refresh-categories="loadCategories"
           />
         </div>
 
@@ -159,6 +161,30 @@
             </div>
           </section>
 
+          <section v-if="isUncategorizedWorkspace" class="toolbar triage-workspace">
+            <div class="triage-workspace-head">
+              <div>
+                <div class="eyebrow">{{ t("triage.title") }}</div>
+                <p class="triage-workspace-title">{{ t("triage.subtitle") }}</p>
+                <p class="toolbar-tip">
+                  {{ filteredProjects.length ? t("triage.remaining", { count: filteredProjects.length }) : t("triage.cleared") }}
+                </p>
+              </div>
+              <div class="admin-actions">
+                <button class="ghost-button" type="button" @click="resetBrowseFilters">{{ t("triage.exit") }}</button>
+                <button class="button" type="button" @click="openAdmin">{{ t("triage.openAdmin") }}</button>
+              </div>
+            </div>
+            <div v-if="triageCategories.length" class="triage-workspace-body">
+              <p class="toolbar-tip">{{ t("triage.quickPick") }}</p>
+              <div class="chip-row">
+                <span v-for="category in triageCategories" :key="`triage-${category}`" class="chip brand">
+                  {{ translateCategory(category) }}
+                </span>
+              </div>
+            </div>
+          </section>
+
           <template v-if="filteredProjects.length">
             <StatsGrid :stats="stats" />
 
@@ -182,9 +208,14 @@
                   :total-count="filteredProjects.length"
                   :range-label="paginationRangeLabel"
                   :title="t('projects.title')"
+                  :show-triage="isUncategorizedWorkspace"
+                  :triage-categories="triageCategories"
+                  :triage-saving-id="triageSavingId"
                   :format-date="formatDate"
                   :format-number="formatNumber"
                   @detail="openDetail"
+                  @quick-category="quickCategorizeProject"
+                  @mark-research="markProjectResearch"
                 />
               </div>
             </Transition>
@@ -254,6 +285,7 @@ import {
   logout,
   recheckRemoteStatus,
   rerunRuleClassification,
+  getManagedCategories,
   runAiClassification,
   syncGithubStars,
   updateProject
@@ -264,7 +296,7 @@ import ProjectDrawer from "./components/ProjectDrawer.vue";
 import ProjectGrid from "./components/ProjectGrid.vue";
 import SidebarPanel from "./components/SidebarPanel.vue";
 import StatsGrid from "./components/StatsGrid.vue";
-import { locale, localeOptions, setLocale, t } from "./i18n";
+import { locale, localeOptions, setLocale, t, translateCategory } from "./i18n";
 
 const ALL_PROJECTS = "__all_projects__";
 const ALL_STATUS = "__all_status__";
@@ -310,6 +342,7 @@ const syncing = ref(false);
 const reclassifyingRules = ref(false);
 const recheckingRemote = ref(false);
 const removingVisible = ref(false);
+const triageSavingId = ref(null);
 const aiClassificationConfig = ref({ enabled: false, model: "", maxPerRun: 25, includeReadme: false });
 const classifyingAi = ref(false);
 const syncStatus = ref({ lastStarSyncAt: null, recentRuns: [] });
@@ -317,6 +350,7 @@ const selectedProjectId = ref(null);
 const previousSelectedProjectId = ref(null);
 const featuresText = ref("");
 const tagsText = ref("");
+const categoryList = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(24);
 const draft = reactive(createEmptyDraft());
@@ -422,6 +456,26 @@ const sidebarRemoteStatusCounts = computed(() => {
 });
 
 const selectedProject = computed(() => projects.value.find(item => item.id === selectedProjectId.value) || null);
+const isUncategorizedWorkspace = computed(() => isAuthenticated.value && filters.category === UNCATEGORIZED);
+const triageCategories = computed(() => {
+  const preferred = [
+    "AI / LLM",
+    "自动化 / 效率工具",
+    "前端 UI / 可视化",
+    "运维 / 自建服务",
+    "网络 / NAS / 虚拟化",
+    "媒体 / 下载 / 图床",
+    "安全 / CTF"
+  ];
+  const available = sidebarCategories.value.filter(category =>
+    category &&
+    category !== ALL_PROJECTS &&
+    category !== UNCATEGORIZED
+  );
+  const preferredAvailable = preferred.filter(category => available.includes(category));
+  const remaining = available.filter(category => !preferredAvailable.includes(category));
+  return [...preferredAvailable, ...remaining].slice(0, 6);
+});
 
 const filteredProjects = computed(() => {
   if (!isAuthenticated.value) {
@@ -539,6 +593,15 @@ async function loadMeta() {
   categoryCounts.value = meta.categoryCounts || {};
 }
 
+async function loadCategories() {
+  try {
+    const data = await getManagedCategories();
+    categoryList.value = data.categories || [];
+  } catch {
+    categoryList.value = [];
+  }
+}
+
 function refreshStats() {
   stats.value = [
     { label: t("stats.total"), value: projects.value.length },
@@ -625,6 +688,44 @@ function syncDraft(project) {
   tagsText.value = Array.isArray(source.tags) ? source.tags.join(", ") : "";
 }
 
+function buildProjectPayload(project, overrides = {}) {
+  return {
+    name: project.name,
+    author: project.author,
+    category: project.category,
+    status: project.status,
+    language: project.language,
+    stars: project.stars,
+    updatedAt: project.updatedAt,
+    recommended: project.recommended,
+    description: project.description,
+    github: project.github,
+    demo: project.demo,
+    docs: project.docs,
+    note: project.note,
+    features: Array.isArray(project.features) ? project.features : [],
+    tags: Array.isArray(project.tags) ? project.tags : [],
+    ...overrides
+  };
+}
+
+function replaceProjectInState(updated) {
+  projects.value = projects.value.map(item => (item.id === updated.id ? updated : item));
+
+  if (selectedProjectId.value === updated.id) {
+    syncDraft(updated);
+  }
+
+  if (drawerOpen.value && activeProject.value?.id === updated.id) {
+    activeProject.value = {
+      ...activeProject.value,
+      ...updated
+    };
+  }
+
+  refreshStats();
+}
+
 function resetDraft() {
   syncDraft(selectedProject.value);
 }
@@ -634,6 +735,7 @@ function openAdmin() {
   adminMessage.value = "";
   importMessage.value = "";
   syncDraft(selectedProject.value);
+  loadCategories();
 }
 
 function closeAdmin() {
@@ -753,6 +855,46 @@ async function runGithubImport() {
     selectProjectForEdit(result.project.id);
   } catch (error) {
     importMessage.value = error.message || uiMessage("导入失败", "Import failed");
+  }
+}
+
+async function quickCategorizeProject({ id, category }) {
+  const project = projects.value.find(item => item.id === id);
+  if (!project || !category) {
+    return;
+  }
+
+  triageSavingId.value = id;
+
+  try {
+    const updated = await updateProject(id, buildProjectPayload(project, { category }));
+    replaceProjectInState(updated);
+    syncMessage.value = t("triage.savedCategory", { category: translateCategory(category) });
+    await loadMeta();
+  } catch (error) {
+    syncMessage.value = error.message || t("triage.saveFailed");
+  } finally {
+    triageSavingId.value = null;
+  }
+}
+
+async function markProjectResearch(id) {
+  const project = projects.value.find(item => item.id === id);
+  if (!project) {
+    return;
+  }
+
+  triageSavingId.value = id;
+
+  try {
+    const updated = await updateProject(id, buildProjectPayload(project, { status: "待研究" }));
+    replaceProjectInState(updated);
+    syncMessage.value = t("triage.savedResearch");
+    await loadMeta();
+  } catch (error) {
+    syncMessage.value = error.message || t("triage.saveFailed");
+  } finally {
+    triageSavingId.value = null;
   }
 }
 
