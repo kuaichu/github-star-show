@@ -133,6 +133,17 @@ export function runAiClassification(payload = {}) {
   });
 }
 
+export function getAutoSyncConfig() {
+  return request("/sync/auto-config");
+}
+
+export function updateAutoSyncConfig(payload = {}) {
+  return request("/sync/auto-config", {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function getManagedCategories() {
   return request("/categories/managed");
 }

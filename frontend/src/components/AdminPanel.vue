@@ -110,6 +110,49 @@
       <p v-if="ruleMessage" class="admin-message">{{ ruleMessage }}</p>
     </details>
 
+    <details class="admin-category-management">
+      <summary class="admin-category-summary">
+        <h3>{{ t("admin.autoSync") }}</h3>
+      </summary>
+      <p class="admin-category-copy">{{ t("admin.autoSyncCopy") }}</p>
+
+      <div class="auto-sync-form">
+        <label class="auto-sync-field checkbox-field">
+          <input v-model="autoSyncEnabled" type="checkbox" />
+          <span>{{ t("admin.autoSyncEnable") }}</span>
+        </label>
+
+        <label class="auto-sync-field">
+          <span>{{ t("admin.autoSyncMode") }}</span>
+          <select v-model="autoSyncMode" class="select">
+            <option value="incremental">{{ t("admin.autoSyncIncremental") }}</option>
+            <option value="full">{{ t("admin.autoSyncFull") }}</option>
+          </select>
+        </label>
+
+        <label class="auto-sync-field">
+          <span>{{ t("admin.autoSyncInterval") }}</span>
+          <select v-model="autoSyncInterval" class="select">
+            <option :value="1">{{ t("admin.autoSyncInterval_1") }}</option>
+            <option :value="3">{{ t("admin.autoSyncInterval_3") }}</option>
+            <option :value="6">{{ t("admin.autoSyncInterval_6") }}</option>
+            <option :value="12">{{ t("admin.autoSyncInterval_12") }}</option>
+            <option :value="24">{{ t("admin.autoSyncInterval_24") }}</option>
+            <option :value="48">{{ t("admin.autoSyncInterval_48") }}</option>
+            <option :value="168">{{ t("admin.autoSyncInterval_168") }}</option>
+          </select>
+        </label>
+
+        <p v-if="autoSyncNextRun" class="admin-message">{{ t("admin.autoSyncNextRun", { time: autoSyncNextRun }) }}</p>
+        <p v-else-if="!autoSyncEnabled" class="admin-message subtle">{{ t("admin.autoSyncDisabled") }}</p>
+
+        <button class="button" type="button" :disabled="autoSyncSaving" @click="saveAutoSync">
+          {{ autoSyncSaving ? t("common.loadingShort") : t("admin.save") }}
+        </button>
+        <p v-if="autoSyncMessage" class="admin-message">{{ autoSyncMessage }}</p>
+      </div>
+    </details>
+
     <div class="admin-layout">
       <aside class="admin-list">
         <div class="admin-list-head">
@@ -329,7 +372,9 @@ import {
   deleteManagedCategory,
   getUserRules,
   createRule as createRuleApi,
-  deleteRule as deleteRuleApi
+  deleteRule as deleteRuleApi,
+  getAutoSyncConfig,
+  updateAutoSyncConfig
 } from "../api/projects.js";
 
 const props = defineProps({
@@ -384,6 +429,53 @@ const ruleForm = ref({
   matchValue: "",
   targetCategory: ""
 });
+
+const autoSyncEnabled = ref(false);
+const autoSyncMode = ref("incremental");
+const autoSyncInterval = ref(24);
+const autoSyncNextRun = ref("");
+const autoSyncMessage = ref("");
+const autoSyncSaving = ref(false);
+
+async function loadAutoSyncConfig() {
+  try {
+    const config = await getAutoSyncConfig();
+    autoSyncEnabled.value = config.enabled;
+    autoSyncMode.value = config.mode;
+    autoSyncInterval.value = config.intervalHours;
+    autoSyncNextRun.value = config.nextScheduledAt ? formatAutoSyncTime(config.nextScheduledAt) : "";
+  } catch {
+    autoSyncEnabled.value = false;
+  }
+}
+
+function formatAutoSyncTime(isoString) {
+  try {
+    const d = new Date(isoString);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return isoString;
+  }
+}
+
+async function saveAutoSync() {
+  autoSyncSaving.value = true;
+  autoSyncMessage.value = "";
+  try {
+    const config = await updateAutoSyncConfig({
+      enabled: autoSyncEnabled.value,
+      mode: autoSyncMode.value,
+      intervalHours: autoSyncInterval.value
+    });
+    autoSyncNextRun.value = config.nextScheduledAt ? formatAutoSyncTime(config.nextScheduledAt) : "";
+    autoSyncMessage.value = t("admin.autoSyncSaved");
+  } catch (err) {
+    autoSyncMessage.value = err.message || t("admin.autoSyncSaveFailed");
+  } finally {
+    autoSyncSaving.value = false;
+  }
+}
 
 async function loadRules() {
   try {
@@ -551,5 +643,6 @@ async function confirmRenameCategory() {
 
 onMounted(() => {
   loadRules();
+  loadAutoSyncConfig();
 });
 </script>

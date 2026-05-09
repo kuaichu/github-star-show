@@ -1946,6 +1946,29 @@ body::after {
   font-size: 13px;
 }
 
+.auto-sync-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auto-sync-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auto-sync-form .checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-message.subtle {
+  opacity: 0.65;
+}
+
 .danger-button-small {
   min-height: 34px;
   padding: 0 12px;

@@ -10,6 +10,7 @@ import {
 } from "../services/syncService.js";
 import { classifyProjectsWithAi, getAiClassificationConfig } from "../services/aiClassificationService.js";
 import { getSyncStatusForUser } from "../services/syncStatusService.js";
+import { getAutoSyncConfig, updateAutoSyncConfig } from "../services/schedulerService.js";
 
 const router = Router();
 
@@ -109,6 +110,36 @@ router.post("/ai-classify", async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message || "Unable to run AI classification." });
+  }
+});
+
+router.get("/auto-config", async (req, res) => {
+  const user = await getSessionUser(req);
+  if (!user) {
+    res.status(401).json({ message: "Login required." });
+    return;
+  }
+
+  try {
+    const config = await getAutoSyncConfig(user.dbUserId);
+    res.json(config);
+  } catch (error) {
+    res.status(400).json({ message: error.message || "Unable to get auto-sync config." });
+  }
+});
+
+router.put("/auto-config", async (req, res) => {
+  const user = await getSessionUser(req);
+  if (!user) {
+    res.status(401).json({ message: "Login required." });
+    return;
+  }
+
+  try {
+    const config = await updateAutoSyncConfig(user.dbUserId, req.body);
+    res.json(config);
+  } catch (error) {
+    res.status(400).json({ message: error.message || "Unable to update auto-sync config." });
   }
 });
 

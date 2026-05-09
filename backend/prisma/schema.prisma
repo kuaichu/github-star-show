@@ -50,6 +50,7 @@ model User {
   userProjects   UserProject[]
   syncRuns       SyncRun[]
   categories     ManagedCategory[]
+  autoSyncConfig AutoSyncConfig?
 }
 
 model GithubAccount {
@@ -120,4 +121,16 @@ model ManagedCategory {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
+}
+
+model AutoSyncConfig {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @unique
+  enabled        Boolean   @default(false)
+  mode           String    @default("incremental")
+  intervalHours  Int       @default(24)
+  nextScheduledAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

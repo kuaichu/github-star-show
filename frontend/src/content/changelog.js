@@ -19,8 +19,8 @@ export const CHANGELOG_CONTENT = {
     close: "关闭",
     currentVersion: {
       heading: "当前版本",
-      version: "v0.1.0-beta.5",
-      summary: "维护活跃度、排序增强、Hero 布局修复",
+      version: "v0.1.0-beta.6",
+      summary: "自动定时同步调度器",
       badge: "Beta"
     },
     capabilities: {
@@ -38,12 +38,26 @@ export const CHANGELOG_CONTENT = {
         "未分类视图批量多选整理",
         "自定义分类规则管理",
         "项目维护活跃度展示（Release / Commit 时间）",
-        "多种排序方式（Star 时间、更新时间、Stars、名称）"
+        "多种排序方式（Star 时间、更新时间、Stars、名称）",
+        "自动定时同步（可选，后台配置）"
       ]
     },
     changelog: {
       heading: "更新历史",
       releases: [
+        {
+          version: "v0.1.0-beta.6",
+          date: "2026-05-10",
+          badge: "功能更新",
+          items: [
+            "自动定时同步调度器：后端 setInterval 每 60 秒轮询到期任务",
+            "后台管理新增自动同步配置面板（启用/禁用、模式、间隔）",
+            "可选功能，默认不开启，用户后台手动配置",
+            "跳过正在同步中的用户，避免并发执行",
+            "GitHub API 失败不破坏本地数据",
+            "PM2 重启后调度器随服务自动启动"
+          ]
+        },
         {
           version: "v0.1.0-beta.5",
           date: "2026-05-10",
@@ -140,8 +154,8 @@ export const CHANGELOG_CONTENT = {
     close: "Close",
     currentVersion: {
       heading: "Current Version",
-      version: "v0.1.0-beta.5",
-      summary: "Maintenance activity, sort enhancements, Hero layout fix",
+      version: "v0.1.0-beta.6",
+      summary: "Scheduled auto-sync scheduler",
       badge: "Beta"
     },
     capabilities: {
@@ -159,12 +173,26 @@ export const CHANGELOG_CONTENT = {
         "Batch multi-select triage in uncategorized view",
         "Custom classification rule management",
         "Maintenance activity display (Release / Commit time)",
-        "Multiple sort options (Star time, Updated, Stars, Name)"
+        "Multiple sort options (Star time, Updated, Stars, Name)",
+        "Scheduled auto-sync (optional, configurable in admin)"
       ]
     },
     changelog: {
       heading: "Changelog",
       releases: [
+        {
+          version: "v0.1.0-beta.6",
+          date: "2026-05-10",
+          badge: "Feature Update",
+          items: [
+            "Scheduled auto-sync: setInterval-based scheduler polls every 60s",
+            "Admin panel: auto-sync config (enable/disable, mode, interval)",
+            "Opt-in feature, default disabled, configured by user in admin",
+            "Skips users currently syncing to prevent concurrent execution",
+            "GitHub API failures do not corrupt local data",
+            "Scheduler auto-starts with the server after PM2 restart"
+          ]
+        },
         {
           version: "v0.1.0-beta.5",
           date: "2026-05-10",
