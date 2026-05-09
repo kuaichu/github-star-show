@@ -148,9 +148,9 @@
               <button class="button" type="button" :disabled="syncing" @click="runStarSync">
                 {{ syncing ? t("signedIn.sync") : primarySyncLabel }}
               </button>
-                <details class="more-actions">
-                  <summary class="more-actions-trigger"><span>{{ t("signedIn.moreActions") }}</span><span class="more-actions-arrow">▾</span></summary>
-                  <div class="more-actions-dropdown">
+                <div ref="moreActionsRef" class="more-actions" :class="{ open: showMore }">
+                  <button class="more-actions-trigger" type="button" @click="showMore = !showMore"><span>{{ t("signedIn.moreActions") }}</span><span class="more-actions-arrow">▾</span></button>
+                  <div v-if="showMore" class="more-actions-dropdown">
                     <button
                       v-if="syncStatus.lastStarSyncAt"
                       class="more-actions-item"
@@ -181,7 +181,7 @@
                     <button class="more-actions-item" type="button" @click="openAdmin">{{ t("signedIn.openAdmin") }}</button>
                     <button class="more-actions-item more-actions-item-danger" type="button" @click="handleLogout">{{ t("signedIn.logout") }}</button>
                   </div>
-                </details>
+                </div>
               </div>
             </div>
           </section>
@@ -434,6 +434,8 @@ const currentUser = ref(null);
 const loading = ref(true);
 const syncMessage = ref("");
 const syncing = ref(false);
+const showMore = ref(false);
+const moreActionsRef = ref(null);
 const reclassifyingRules = ref(false);
 const recheckingRemote = ref(false);
 const removingVisible = ref(false);
@@ -1283,6 +1285,19 @@ watch(selectedProject, value => {
 watch(locale, () => {
   if (isAuthenticated.value) {
     refreshStats();
+  }
+});
+
+watch(showMore, (open) => {
+  if (open) {
+    const handler = (e) => {
+      if (moreActionsRef.value && !moreActionsRef.value.contains(e.target)) {
+        showMore.value = false;
+      }
+    };
+    document.addEventListener("click", handler, true);
+    const cleanup = () => document.removeEventListener("click", handler, true);
+    const unwatch = watch(() => showMore.value, (val) => { if (!val) { cleanup(); unwatch(); } });
   }
 });
 
