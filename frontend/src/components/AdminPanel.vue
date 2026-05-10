@@ -35,9 +35,12 @@
 
       <div v-if="managedCategories.length" class="admin-category-group">
         <div v-for="cat in managedCategories" :key="cat.id" class="admin-category-row">
-          <span class="chip brand">{{ cat.name }}</span>
+          <span class="category-name-wrap">
+            <span class="category-marker brand"></span>
+            <span class="category-name">{{ cat.name }}</span>
+          </span>
           <div class="admin-category-row-actions">
-            <button class="ghost-button" type="button" @click="openRenameModal(cat)">{{ t("admin.renameCategory") }}</button>
+            <button class="ghost-button-small" type="button" @click="openRenameModal(cat)">{{ t("admin.renameCategory") }}</button>
             <button class="danger-button-small" type="button" @click="openDeleteCategoryModal(cat)">{{ t("admin.deleteCategory") }}</button>
           </div>
         </div>

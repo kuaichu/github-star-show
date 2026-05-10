@@ -1970,7 +1970,7 @@ body::after {
 }
 
 .admin-category-group {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .admin-category-group-label {
@@ -1993,12 +1993,8 @@ body::after {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.admin-category-row:last-child {
-  border-bottom: none;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .admin-category-row-actions {
@@ -2006,11 +2002,59 @@ body::after {
   gap: 8px;
 }
 
+/* Category name: 4px colored bar + text */
+.category-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.category-marker {
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.category-marker.brand {
+  background: var(--brand);
+}
+.category-name {
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Consistent small buttons for rename/delete */
+.ghost-button-small {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  transition: 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.ghost-button-small:hover {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Add area: separator from list + grid layout */
 .admin-category-add {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
-  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 12px;
+  margin-top: 4px;
 }
 
 .rule-form-row {
