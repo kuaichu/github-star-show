@@ -267,7 +267,10 @@ const messages = {
       autoSyncEnabled: "自动同步已开启",
       autoSyncSaved: "自动同步设置已保存",
       autoSyncSaveFailed: "保存自动同步设置失败",
-      autoSyncSaveBtn: "保存设置"
+      autoSyncSaveBtn: "保存设置",
+      ruleTypeTopic: "主题",
+      ruleTypeKeyword: "关键词",
+      ruleTypeLanguage: "语言"
     },
     quickFilters: {
       recommended: "推荐",
@@ -536,7 +539,10 @@ const messages = {
       autoSyncEnabled: "Auto sync is on",
       autoSyncSaved: "Auto sync settings saved",
       autoSyncSaveFailed: "Failed to save auto sync settings",
-      autoSyncSaveBtn: "Save Settings"
+      autoSyncSaveBtn: "Save Settings",
+      ruleTypeTopic: "Topic",
+      ruleTypeKeyword: "Keyword",
+      ruleTypeLanguage: "Language"
     },
     quickFilters: {
       recommended: "Recommended",
