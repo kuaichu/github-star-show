@@ -225,7 +225,7 @@ const messages = {
       categoryManagement: "分类管理",
       categoryManagementCopy: "创建、重命名或删除分类。所有分类均可修改。",
       rulesTitle: "分类规则管理",
-      rulesCopy: "自定义分类规则。自定义规则优先于内置规则。支持 Topic 匹配、关键词匹配和语言匹配。",
+      rulesCopy: "自定义分类规则。自定义规则优先于内置规则。支持主题匹配、关键词匹配和语言匹配。",
       rulesEmpty: "添加你的第一条分类规则，来覆盖默认分类行为。",
       deleteRule: "删除规则",
       addRule: "添加规则",
