@@ -117,13 +117,21 @@
       <p class="admin-category-copy">{{ t("admin.autoSyncCopy") }}</p>
 
       <div class="auto-sync-form">
-        <label class="auto-sync-field checkbox-field">
-          <input v-model="autoSyncEnabled" type="checkbox" />
-          <span>{{ t("admin.autoSyncEnable") }}</span>
-        </label>
+        <div class="auto-sync-field">
+          <span class="auto-sync-label">{{ t("admin.autoSync") }}</span>
+          <div class="switch-row">
+            <span class="switch-status" :class="{ active: autoSyncEnabled }">
+              {{ autoSyncEnabled ? (autoSyncNextRun ? t("admin.autoSyncNextRun", { time: autoSyncNextRun }) : t("admin.autoSyncEnabled")) : t("admin.autoSyncDisabled") }}
+            </span>
+            <label class="switch-toggle">
+              <input v-model="autoSyncEnabled" type="checkbox" />
+              <span class="switch-toggle-ui" aria-hidden="true"></span>
+            </label>
+          </div>
+        </div>
 
         <label class="auto-sync-field">
-          <span>{{ t("admin.autoSyncMode") }}</span>
+          <span class="auto-sync-label">{{ t("admin.autoSyncMode") }}</span>
           <select v-model="autoSyncMode" class="select">
             <option value="incremental">{{ t("admin.autoSyncIncremental") }}</option>
             <option value="full">{{ t("admin.autoSyncFull") }}</option>
@@ -131,7 +139,7 @@
         </label>
 
         <label class="auto-sync-field">
-          <span>{{ t("admin.autoSyncInterval") }}</span>
+          <span class="auto-sync-label">{{ t("admin.autoSyncInterval") }}</span>
           <select v-model="autoSyncInterval" class="select">
             <option :value="1">{{ t("admin.autoSyncInterval_1") }}</option>
             <option :value="3">{{ t("admin.autoSyncInterval_3") }}</option>
@@ -143,13 +151,14 @@
           </select>
         </label>
 
-        <p v-if="autoSyncNextRun" class="admin-message">{{ t("admin.autoSyncNextRun", { time: autoSyncNextRun }) }}</p>
-        <p v-else-if="!autoSyncEnabled" class="admin-message subtle">{{ t("admin.autoSyncDisabled") }}</p>
-
-        <button class="button" type="button" :disabled="autoSyncSaving" @click="saveAutoSync">
-          {{ autoSyncSaving ? t("common.loadingShort") : t("admin.save") }}
-        </button>
-        <p v-if="autoSyncMessage" class="admin-message">{{ autoSyncMessage }}</p>
+        <div class="auto-sync-actions">
+          <button class="button auto-sync-save" type="button" :disabled="autoSyncSaving" @click="saveAutoSync">
+            {{ autoSyncSaving ? t("common.loadingShort") : t("admin.save") }}
+          </button>
+          <transition name="toast-fade">
+            <span v-if="autoSyncMessage" class="auto-sync-toast">{{ autoSyncMessage }}</span>
+          </transition>
+        </div>
       </div>
     </details>
 
@@ -432,6 +441,7 @@ const autoSyncInterval = ref(24);
 const autoSyncNextRun = ref("");
 const autoSyncMessage = ref("");
 const autoSyncSaving = ref(false);
+const autoSyncTimer = ref(null);
 
 async function loadAutoSyncConfig() {
   try {
@@ -456,6 +466,10 @@ function formatAutoSyncTime(isoString) {
 }
 
 async function saveAutoSync() {
+  if (autoSyncTimer.value) {
+    clearTimeout(autoSyncTimer.value);
+    autoSyncTimer.value = null;
+  }
   autoSyncSaving.value = true;
   autoSyncMessage.value = "";
   try {
@@ -466,8 +480,10 @@ async function saveAutoSync() {
     });
     autoSyncNextRun.value = config.nextScheduledAt ? formatAutoSyncTime(config.nextScheduledAt) : "";
     autoSyncMessage.value = t("admin.autoSyncSaved");
+    autoSyncTimer.value = setTimeout(() => { autoSyncMessage.value = ""; }, 2000);
   } catch (err) {
     autoSyncMessage.value = err.message || t("admin.autoSyncSaveFailed");
+    autoSyncTimer.value = setTimeout(() => { autoSyncMessage.value = ""; }, 3000);
   } finally {
     autoSyncSaving.value = false;
   }

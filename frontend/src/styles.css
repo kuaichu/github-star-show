@@ -2048,19 +2048,126 @@ body::after {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 22px;
 }
 
 .auto-sync-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.auto-sync-form .checkbox-field {
-  flex-direction: row;
+.auto-sync-label {
+  font-size: 13px;
+  color: var(--muted-strong);
+  font-weight: 500;
+}
+
+/* Switch row — no dark card, inline status + toggle */
+.switch-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.switch-status {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.4;
+  line-height: 1.4;
+}
+.switch-status.active {
+  color: var(--brand);
+}
+
+/* Larger switch toggle */
+.switch-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.switch-toggle input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+/* Switch toggle off-state: visible boundary */
+.switch-toggle-ui {
+  width: 56px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  transition: 0.2s ease;
+  position: relative;
+}
+.switch-toggle-ui::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f3fbfd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  transition: 0.2s ease;
+}
+.switch-toggle input:checked + .switch-toggle-ui {
+  background: rgba(94, 247, 197, 0.18);
+  border-color: rgba(94, 247, 197, 0.42);
+}
+.switch-toggle input:checked + .switch-toggle-ui::after {
+  transform: translateX(24px);
+  background: var(--brand);
+}
+.switch-toggle input:focus-visible + .switch-toggle-ui {
+  outline: 2px solid rgba(94, 247, 197, 0.35);
+  outline-offset: 3px;
+}
+
+/* Save button + toast */
+.auto-sync-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.auto-sync-save {
+  width: 100%;
+  background: var(--brand);
+  color: #051018;
+  border-color: transparent;
+  justify-content: center;
+  font-weight: 700;
+}
+.auto-sync-save:hover {
+  background: rgba(94, 247, 197, 0.85);
+  border-color: transparent;
+}
+.auto-sync-save:disabled {
+  background: rgba(94, 247, 197, 0.2);
+  color: rgba(5, 16, 24, 0.4);
+  border-color: transparent;
+}
+.auto-sync-toast {
+  font-size: 13px;
+  color: var(--brand);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
 }
 
 .admin-message.subtle {

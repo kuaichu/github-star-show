@@ -264,6 +264,7 @@ const messages = {
       autoSyncInterval_168: "每周",
       autoSyncNextRun: "下次执行：{time}",
       autoSyncDisabled: "自动同步已关闭",
+      autoSyncEnabled: "自动同步已开启",
       autoSyncSaved: "自动同步设置已保存",
       autoSyncSaveFailed: "保存自动同步设置失败"
     },
@@ -531,6 +532,7 @@ const messages = {
       autoSyncInterval_168: "Every week",
       autoSyncNextRun: "Next run: {time}",
       autoSyncDisabled: "Auto sync is disabled",
+      autoSyncEnabled: "Auto sync is on",
       autoSyncSaved: "Auto sync settings saved",
       autoSyncSaveFailed: "Failed to save auto sync settings"
     },
