@@ -30,7 +30,7 @@
         </div>
       </div>
 
-      <div v-if="loading" class="view-shell">
+      <div v-if="loading || !authResolved" class="view-shell">
         <section class="hero-panel sk-hero">
           <div class="hero-head">
             <div class="hero-copy">
@@ -62,7 +62,7 @@
         </div>
       </div>
 
-      <Transition name="admin-surface" mode="out-in">
+      <Transition v-else name="admin-surface" mode="out-in">
         <div v-if="adminMode" key="admin">
           <AdminPanel
             :projects="projects"
@@ -424,6 +424,7 @@ const filters = reactive({
 });
 
 const projects = ref([]);
+const authResolved = ref(false);
 const categories = ref([]);
 const statusOptions = ref([]);
 const categoryCounts = ref({});
@@ -780,8 +781,14 @@ async function loadProjects() {
 }
 
 async function loadCurrentUser() {
-  const result = await getCurrentUser();
-  currentUser.value = result.user;
+  try {
+    const result = await getCurrentUser();
+    currentUser.value = result?.user || null;
+  } catch {
+    currentUser.value = null;
+  } finally {
+    authResolved.value = true;
+  }
 }
 
 async function loadAiConfig() {
@@ -1327,13 +1334,16 @@ watch(showPageSize, (open) => {
 });
 
 onMounted(async () => {
-  await loadCurrentUser();
-  await loadAiConfig();
-  await loadMeta();
-  if (isAuthenticated.value) {
-    await loadProjects();
-    await loadSyncStatus();
+  try {
+    await loadCurrentUser();
+    await loadAiConfig();
+    await loadMeta();
+    if (isAuthenticated.value) {
+      await loadProjects();
+      await loadSyncStatus();
+    }
+  } finally {
+    loading.value = false;
   }
-  loading.value = false;
 });
 </script>

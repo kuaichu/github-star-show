@@ -25,6 +25,10 @@ html {
   background: #03080e;
 }
 
+html.drawer-open {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
@@ -33,6 +37,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   overflow-y: scroll;
+}
+
+body.drawer-open {
+  overflow: hidden;
 }
 
 body::before {
@@ -1213,6 +1221,14 @@ body::after {
   color: var(--brand-2);
 }
 
+.markdown-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 10px 0 14px;
+  border-radius: 12px;
+}
+
 .markdown-body code {
   padding: 2px 6px;
   border-radius: 6px;
@@ -1540,6 +1556,7 @@ body::after {
   z-index: 31;
   transition: right 0.2s ease;
   overflow-y: auto;
+  overscroll-behavior: contain;
   box-shadow: -30px 0 80px rgba(0, 0, 0, 0.42);
 }
 
@@ -1711,6 +1728,87 @@ body::after {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.drawer-toggle-field {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(4, 13, 20, 0.94);
+}
+
+.drawer-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drawer-toggle-title {
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.drawer-toggle-hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.drawer-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.drawer-switch-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.drawer-switch-ui {
+  width: 50px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(94, 247, 197, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  transition: 0.2s ease;
+  position: relative;
+}
+
+.drawer-switch-ui::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f3fbfd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  transition: 0.2s ease;
+}
+
+.drawer-switch-input:checked + .drawer-switch-ui {
+  background: rgba(94, 247, 197, 0.18);
+  border-color: rgba(94, 247, 197, 0.42);
+}
+
+.drawer-switch-input:checked + .drawer-switch-ui::after {
+  transform: translateX(20px);
+  background: var(--brand);
+}
+
+.drawer-switch-input:focus-visible + .drawer-switch-ui {
+  outline: 2px solid rgba(94, 247, 197, 0.35);
+  outline-offset: 3px;
 }
 
 .drawer-edit-actions {

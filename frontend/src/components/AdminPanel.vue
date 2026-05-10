@@ -258,10 +258,6 @@
               <span>{{ t("admin.fields.updatedAt") }}</span>
               <input v-model="draft.updatedAt" class="input" type="date" />
             </label>
-            <label class="checkbox-field">
-              <input v-model="draft.recommended" type="checkbox" />
-              <span>{{ t("admin.fields.recommended") }}</span>
-            </label>
             <label class="full">
               <span>{{ t("admin.fields.description") }}</span>
               <textarea v-model="draft.description" class="textarea"></textarea>

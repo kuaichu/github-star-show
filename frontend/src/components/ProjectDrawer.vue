@@ -1,6 +1,6 @@
 <template>
   <div class="drawer-mask" :class="{ show: visible }" @click="closeDrawer"></div>
-  <aside class="drawer" :class="{ show: visible }" :aria-hidden="visible ? 'false' : 'true'">
+  <aside ref="drawerRef" class="drawer" :class="{ show: visible }" :aria-hidden="visible ? 'false' : 'true'">
     <div class="drawer-head">
       <div>
         <div class="eyebrow">{{ t("drawer.eyebrow") }}</div>
@@ -8,7 +8,7 @@
         <p class="drawer-subtitle">
           {{ project ? `@${project.author} / ${translateCategory(project.category)} / ${translateStatus(project.status)}` : t("drawer.emptySubtitle") }}
         </p>
-        <div v-if="project && headerLinks.length" class="drawer-top-actions">
+        <div v-if="project && headerLinks.length && !editing" class="drawer-top-actions">
           <a
             v-for="item in headerLinks"
             :key="item.href"
@@ -35,7 +35,7 @@
     </div>
 
     <template v-if="project">
-      <nav class="drawer-tabs" :aria-label="tabCopy.sections">
+      <nav v-if="!editing" class="drawer-tabs" :aria-label="tabCopy.sections">
         <button
           v-for="item in tabItems"
           :key="item.key"
@@ -72,15 +72,20 @@
                 >{{ translateStatus(opt) }}</option>
               </select>
             </label>
-            <label class="drawer-edit-field drawer-edit-field-full">
-              <span class="drawer-edit-label">{{ t("drawer.fields.recommended") }}</span>
-              <div class="checkbox-field">
+            <label class="drawer-edit-field drawer-edit-field-full drawer-toggle-field" for="drawer-recommended">
+              <span class="drawer-toggle-copy">
+                <strong class="drawer-toggle-title">{{ t("drawer.fields.recommended") }}</strong>
+                <span class="drawer-toggle-hint">在前台将项目显示为推荐项</span>
+              </span>
+              <span class="drawer-switch">
                 <input
                   id="drawer-recommended"
                   v-model="editForm.recommended"
+                  class="drawer-switch-input"
                   type="checkbox"
                 />
-              </div>
+                <span class="drawer-switch-ui" aria-hidden="true"></span>
+              </span>
             </label>
             <label class="drawer-edit-field drawer-edit-field-full">
               <span class="drawer-edit-label">{{ t("drawer.notes") }}</span>
@@ -165,7 +170,7 @@
               {{ tabCopy.openReadme }}
             </a>
           </div>
-          <div v-if="project.readme" class="readme-preview markdown-body" v-html="renderedReadme"></div>
+          <div v-if="project.readme" ref="readmePreviewRef" class="readme-preview markdown-body" v-html="renderedReadme"></div>
           <p v-else class="detail-text">{{ tabCopy.readmeEmpty }}</p>
         </section>
       </template>
@@ -184,30 +189,12 @@
         </section>
       </template>
 
-      <template v-else-if="activeTab === 'links'">
-        <section class="detail-panel">
-          <h3>{{ tabCopy.links }}</h3>
-          <div class="detail-link-grid">
-            <a
-              v-for="item in linkItems"
-              :key="item.href"
-              class="detail-link-card"
-              :href="item.href"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <div class="detail-link-label">{{ item.label }}</div>
-              <div class="detail-link-url">{{ item.preview }}</div>
-            </a>
-          </div>
-        </section>
-      </template>
     </template>
   </aside>
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { updateProject } from "../api/projects";
 import { locale, t, translateCategory, translateRemoteStatus, translateStatus } from "../i18n";
 
@@ -225,6 +212,9 @@ const activeTab = ref("overview");
 const editing = ref(false);
 const saving = ref(false);
 const editMessage = ref("");
+const drawerRef = ref(null);
+const readmePreviewRef = ref(null);
+let lockedScrollY = 0;
 const editForm = reactive({
   category: "",
   status: "",
@@ -271,6 +261,7 @@ async function saveEditing() {
 
   try {
     const updated = await updateProject(props.project.id, {
+      ...props.project,
       category: editForm.category,
       status: editForm.status,
       note: editForm.note,
@@ -293,11 +284,11 @@ const tabCopy = computed(() => {
       overview: "概览",
       readme: "README",
       notes: "备注",
-      links: "链接",
       readmeHint: "以下内容来自 GitHub 仓库主页的 README.md 预览。",
       readmeEmpty: "这个项目当前没有可读取的 README 内容。",
       openReadme: "在 GitHub 中查看 README",
       github: "GitHub",
+      release: "Release",
       demo: "演示",
       docs: "文档",
       editTitle: "编辑项目"
@@ -309,11 +300,11 @@ const tabCopy = computed(() => {
     overview: "Overview",
     readme: "README",
     notes: "Notes",
-    links: "Links",
     readmeHint: "Preview pulled from the repository README on GitHub.",
     readmeEmpty: "This project does not currently expose a readable README.",
     openReadme: "Open README on GitHub",
     github: "GitHub",
+    release: "Release",
     demo: "Demo",
     docs: "Docs",
     editTitle: "Edit Project"
@@ -350,20 +341,9 @@ const headerLinks = computed(() => {
 
   return [
     props.project.github ? { href: props.project.github, label: tabCopy.value.github } : null,
+    props.project.github && props.project.latestReleaseAt ? { href: buildReleaseUrl(props.project.github), label: tabCopy.value.release } : null,
     props.project.demo ? { href: props.project.demo, label: tabCopy.value.demo } : null,
     props.project.docs ? { href: props.project.docs, label: tabCopy.value.docs } : null
-  ].filter(Boolean);
-});
-
-const linkItems = computed(() => {
-  if (!props.project) {
-    return [];
-  }
-
-  return [
-    props.project.github ? { href: props.project.github, label: tabCopy.value.github, preview: compactUrl(props.project.github) } : null,
-    props.project.demo ? { href: props.project.demo, label: tabCopy.value.demo, preview: compactUrl(props.project.demo) } : null,
-    props.project.docs ? { href: props.project.docs, label: tabCopy.value.docs, preview: compactUrl(props.project.docs) } : null
   ].filter(Boolean);
 });
 
@@ -375,10 +355,6 @@ const tabItems = computed(() => {
   }
 
   items.push({ key: "notes", label: tabCopy.value.notes });
-
-  if (linkItems.value.length) {
-    items.push({ key: "links", label: tabCopy.value.links });
-  }
 
   return items;
 });
@@ -434,12 +410,53 @@ const classificationReasonText = computed(() => {
   return `${classificationCopy.value.reason}: ${props.project.categoryReason}`;
 });
 
+function resetDrawerScroll() {
+  if (drawerRef.value) {
+    drawerRef.value.scrollTop = 0;
+  }
+  if (readmePreviewRef.value) {
+    readmePreviewRef.value.scrollTop = 0;
+    readmePreviewRef.value.scrollLeft = 0;
+  }
+}
+
+function syncBodyScrollLock() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  const html = document.documentElement;
+  const body = document.body;
+
+  if (props.visible) {
+    lockedScrollY = window.scrollY || window.pageYOffset || 0;
+    html.classList.add("drawer-open");
+    body.classList.add("drawer-open");
+    body.style.position = "fixed";
+    body.style.top = `-${lockedScrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    return;
+  }
+
+  html.classList.remove("drawer-open");
+  body.classList.remove("drawer-open");
+  body.style.position = "";
+  body.style.top = "";
+  body.style.left = "";
+  body.style.right = "";
+  body.style.width = "";
+  window.scrollTo(0, lockedScrollY);
+}
+
 watch(
   () => props.project?.id,
-  () => {
+  async () => {
     activeTab.value = props.project?.readme ? "readme" : "overview";
     editing.value = false;
     editMessage.value = "";
+    await nextTick();
+    resetDrawerScroll();
   },
   { immediate: true }
 );
@@ -450,13 +467,39 @@ watch(tabItems, items => {
   }
 });
 
-function compactUrl(value) {
-  try {
-    const url = new URL(value);
-    return `${url.host}${url.pathname}`.replace(/\/$/, "");
-  } catch {
-    return value;
+watch(
+  () => activeTab.value,
+  async tab => {
+    if (tab !== "readme") {
+      return;
+    }
+    await nextTick();
+    resetDrawerScroll();
   }
+);
+
+watch(
+  () => props.visible,
+  () => {
+    syncBodyScrollLock();
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.remove("drawer-open");
+    document.body.classList.remove("drawer-open");
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+  }
+});
+
+function buildReleaseUrl(githubUrl) {
+  return `${String(githubUrl).replace(/\/$/, "")}/releases`;
 }
 
 function escapeHtml(value) {
@@ -470,6 +513,7 @@ function escapeHtml(value) {
 
 function renderInlineMarkdown(text) {
   let html = escapeHtml(text);
+  html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" />');
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
@@ -477,8 +521,30 @@ function renderInlineMarkdown(text) {
   return html;
 }
 
+function sanitizeReadmeMarkdown(markdown) {
+  return String(markdown || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(div|p|section|article|header|footer)>/gi, "\n")
+    .replace(/<(div|p|section|article|header|footer)(\s[^>]*)?>/gi, "")
+    .replace(/<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*\/?>/gi, "![$2]($1)")
+    .replace(/<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']+)["'][^>]*\/?>/gi, "![$1]($2)")
+    .replace(/<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) => {
+      const label = String(inner)
+        .replace(/<img[^>]*alt=["']([^"']*)["'][^>]*\/?>/gi, "$1")
+        .replace(/<[^>]+>/g, "")
+        .trim();
+      return `[${label || href}](${href})`;
+    })
+    .replace(/<\/?summary[^>]*>/gi, "")
+    .replace(/<\/?details[^>]*>/gi, "")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function renderMarkdown(markdown) {
-  const source = String(markdown || "").replace(/\r\n/g, "\n").trim();
+  const source = sanitizeReadmeMarkdown(markdown);
   if (!source) {
     return "";
   }

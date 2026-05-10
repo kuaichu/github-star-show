@@ -18,33 +18,46 @@ export const CHANGELOG_CONTENT = {
     subtitle: "这里记录当前 demo 已支持的能力，以及每个版本新增或调整的内容。",
     close: "关闭",
     currentVersion: {
-      heading: "当前版本",
-      version: "v0.1.0-beta.6",
-      summary: "自动定时同步调度器",
+      heading: "\u5f53\u524d\u7248\u672c",
+      version: "v0.1.0-beta.7",
+      summary: "\u9879\u76ee\u8be6\u60c5\u62bd\u5c49\u4ea4\u4e92\u4e0e\u7f16\u8f91\u4f53\u9a8c\u4f18\u5316",
       badge: "Beta"
     },
     capabilities: {
-      heading: "当前能力",
+      heading: "\u5f53\u524d\u80fd\u529b",
       items: [
-        "GitHub OAuth 登录",
-        "按用户隔离的 Star 同步",
-        "增量同步与全量重同步",
-        "规则分类与分类导航",
-        "远端状态追踪",
-        "后台编辑与项目管理",
-        "删除时可选同步取消 GitHub Star",
-        "项目详情内 README 预览",
-        "项目详情抽屉内直接编辑分类/状态/备注",
-        "未分类视图批量多选整理",
-        "自定义分类规则管理",
-        "项目维护活跃度展示（Release / Commit 时间）",
-        "多种排序方式（Star 时间、更新时间、Stars、名称）",
-        "自动定时同步（可选，后台配置）"
+        "GitHub OAuth \u767b\u5f55",
+        "\u6309\u7528\u6237\u9694\u79bb\u7684 Star \u540c\u6b65",
+        "\u589e\u91cf\u540c\u6b65\u4e0e\u5168\u91cf\u91cd\u540c\u6b65",
+        "\u89c4\u5219\u5206\u7c7b\u4e0e\u5206\u7c7b\u5bfc\u822a",
+        "\u8fdc\u7aef\u72b6\u6001\u8ffd\u8e2a",
+        "\u540e\u53f0\u7f16\u8f91\u4e0e\u9879\u76ee\u7ba1\u7406",
+        "\u5220\u9664\u65f6\u53ef\u9009\u540c\u6b65\u53d6\u6d88 GitHub Star",
+        "\u9879\u76ee\u8be6\u60c5\u5185 README \u9884\u89c8",
+        "\u9879\u76ee\u8be6\u60c5\u62bd\u5c49\u5185\u76f4\u63a5\u7f16\u8f91\u5206\u7c7b/\u72b6\u6001/\u5907\u6ce8/\u63a8\u8350\u6807\u8bb0",
+        "\u672a\u5206\u7c7b\u89c6\u56fe\u6279\u91cf\u591a\u9009\u6574\u7406",
+        "\u81ea\u5b9a\u4e49\u5206\u7c7b\u89c4\u5219\u7ba1\u7406",
+        "\u9879\u76ee\u7ef4\u62a4\u6d3b\u8dc3\u5ea6\u5c55\u793a\uff08Release / Commit \u65f6\u95f4\uff09",
+        "\u591a\u79cd\u6392\u5e8f\u65b9\u5f0f\uff08Star \u65f6\u95f4\u3001\u66f4\u65b0\u65f6\u95f4\u3001Stars\u3001\u540d\u79f0\uff09",
+        "\u81ea\u52a8\u5b9a\u65f6\u540c\u6b65\uff08\u53ef\u9009\uff0c\u540e\u53f0\u914d\u7f6e\uff09"
       ]
     },
     changelog: {
-      heading: "更新历史",
+      heading: "\u66f4\u65b0\u5386\u53f2",
       releases: [
+        {
+          version: "v0.1.0-beta.7",
+          date: "2026-05-10",
+          badge: "UI \u4f18\u5316",
+          items: [
+            "\u5c06\u63a8\u8350\u5165\u53e3\u4ece\u540e\u53f0\u4e3b\u7ba1\u7406\u8868\u5355\u79fb\u5165\u9879\u76ee\u8be6\u60c5\u62bd\u5c49\u7f16\u8f91\u533a",
+            "\u5c06\u63a8\u8350\u6807\u8bb0\u91cd\u505a\u4e3a\u5f00\u5173\u5f0f\u884c\u5185\u8bbe\u7f6e\uff0c\u4f18\u5316\u62bd\u5c49\u7f16\u8f91\u533a\u5c42\u7ea7",
+            "\u8fdb\u5165\u7f16\u8f91\u6001\u65f6\u81ea\u52a8\u9690\u85cf\u9876\u90e8\u5feb\u6377\u6309\u94ae\u548c\u9875\u7b7e\uff0c\u907f\u514d\u53ef\u70b9\u51fb\u4f46\u65e0\u6cd5\u5207\u6362\u7684\u72b6\u6001\u51b2\u7a81",
+            "\u79fb\u9664\u91cd\u590d\u7684\u94fe\u63a5\u9875\u7b7e\uff0c\u4ec5\u4fdd\u7559\u9876\u90e8 GitHub / \u6f14\u793a / \u6587\u6863 \u5feb\u6377\u5165\u53e3",
+            "\u5f53\u5b58\u5728 Release \u6d3b\u8dc3\u5ea6\u4fe1\u606f\u65f6\uff0c\u62bd\u5c49\u9876\u90e8\u65b0\u589e Release \u5feb\u6377\u6309\u94ae",
+            "\u4fee\u590d\u62bd\u5c49\u5c40\u90e8\u7f16\u8f91\u4fdd\u5b58\u65f6\u51fa\u73b0 name is required \u7684\u6821\u9a8c\u9519\u8bef"
+          ]
+        },
         {
           version: "v0.1.0-beta.6",
           date: "2026-05-10",
@@ -154,8 +167,8 @@ export const CHANGELOG_CONTENT = {
     close: "Close",
     currentVersion: {
       heading: "Current Version",
-      version: "v0.1.0-beta.6",
-      summary: "Scheduled auto-sync scheduler",
+      version: "v0.1.0-beta.7",
+      summary: "Project drawer UX and editing refinement",
       badge: "Beta"
     },
     capabilities: {
@@ -169,7 +182,7 @@ export const CHANGELOG_CONTENT = {
         "Admin editing and manual project management",
         "Optional GitHub unstar during deletion",
         "README preview in project details",
-        "In-drawer editing of category, status, notes",
+        "In-drawer editing of category, status, notes, and recommended flag",
         "Batch multi-select triage in uncategorized view",
         "Custom classification rule management",
         "Maintenance activity display (Release / Commit time)",
@@ -181,6 +194,19 @@ export const CHANGELOG_CONTENT = {
       heading: "Changelog",
       releases: [
         {
+          version: "v0.1.0-beta.7",
+          date: "2026-05-10",
+          badge: "UI Refinement",
+          items: [
+            "Moved the recommended entry out of the main admin form and into the project drawer edit flow",
+            "Reworked the recommended control into a switch-style inline setting inside the drawer",
+            "Edit mode now hides header shortcut buttons and content tabs to avoid conflicting navigation states",
+            "Removed the duplicated Links tab and kept GitHub / Demo / Docs as header shortcuts only",
+            "Added a Release shortcut in the drawer header when release activity is available",
+            "Fixed partial drawer saves failing with the validation error: name is required"
+          ]
+        },
+        {
           version: "v0.1.0-beta.6",
           date: "2026-05-10",
           badge: "Feature Update",
@@ -190,7 +216,9 @@ export const CHANGELOG_CONTENT = {
             "Opt-in feature, default disabled, configured by user in admin",
             "Skips users currently syncing to prevent concurrent execution",
             "GitHub API failures do not corrupt local data",
-            "Scheduler auto-starts with the server after PM2 restart"
+            "Scheduler auto-starts with the server after PM2 restart",
+            "Project drawer UI refinement: recommended moved to a switch-style inline setting and edit mode now hides shortcut links and tabs",
+            "Project drawer now shows a Release shortcut when release activity is available"
           ]
         },
         {
