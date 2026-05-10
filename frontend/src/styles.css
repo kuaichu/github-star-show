@@ -390,6 +390,19 @@ body::after {
   flex-wrap: wrap;
 }
 
+.admin-head-subtitle {
+  margin: 2px 0 0;
+  font-size: 14px;
+  opacity: 0.5;
+  color: var(--text);
+}
+.admin-head-desc {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .hero-head {
   display: grid;
   grid-template-columns: 1fr auto;

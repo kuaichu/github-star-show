@@ -2,9 +2,9 @@
   <section class="admin-panel">
     <div class="admin-head">
       <div>
-        <div class="eyebrow">{{ t("admin.eyebrow") }}</div>
         <h2>{{ t("admin.title") }}</h2>
-        <p>{{ t("admin.subtitle") }}</p>
+        <p class="admin-head-subtitle">{{ t("admin.eyebrow") }}</p>
+        <p class="admin-head-desc">{{ t("admin.subtitle") }}</p>
       </div>
       <button class="ghost-button" type="button" @click="$emit('close')">{{ t("admin.back") }}</button>
     </div>
