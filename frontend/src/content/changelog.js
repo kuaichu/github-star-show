@@ -19,8 +19,8 @@ export const CHANGELOG_CONTENT = {
     close: "关闭",
     currentVersion: {
       heading: "\u5f53\u524d\u7248\u672c",
-      version: "v0.1.0-beta.7",
-      summary: "\u9879\u76ee\u8be6\u60c5\u62bd\u5c49\u4ea4\u4e92\u4e0e\u7f16\u8f91\u4f53\u9a8c\u4f18\u5316",
+      version: "v0.1.0-beta.8",
+      summary: "\u540e\u53f0\u7ba1\u7406\u9762\u677f\u5168\u9762 UI \u6253\u78e8",
       badge: "Beta"
     },
     capabilities: {
@@ -39,12 +39,32 @@ export const CHANGELOG_CONTENT = {
         "\u81ea\u5b9a\u4e49\u5206\u7c7b\u89c4\u5219\u7ba1\u7406",
         "\u9879\u76ee\u7ef4\u62a4\u6d3b\u8dc3\u5ea6\u5c55\u793a\uff08Release / Commit \u65f6\u95f4\uff09",
         "\u591a\u79cd\u6392\u5e8f\u65b9\u5f0f\uff08Star \u65f6\u95f4\u3001\u66f4\u65b0\u65f6\u95f4\u3001Stars\u3001\u540d\u79f0\uff09",
-        "\u81ea\u52a8\u5b9a\u65f6\u540c\u6b65\uff08\u53ef\u9009\uff0c\u540e\u53f0\u914d\u7f6e\uff09"
+        "\u81ea\u52a8\u5b9a\u65f6\u540c\u6b65\uff08\u53ef\u9009\uff0c\u540e\u53f0\u914d\u7f6e\uff09",
+        "\u5206\u7c7b\u7ba1\u7406\u9762\u677f\u5217\u8868\u6837\u5f0f\u4f18\u5316\u4e0e\u7edf\u4e00\u64cd\u4f5c\u6309\u94ae",
+        "\u81ea\u52a8\u540c\u6b65\u9762\u677f\u5168\u5bbd\u586b\u5145\u5f0f\u4fdd\u5b58\u6309\u94ae\u4e0e Toast \u63d0\u793a"
       ]
     },
     changelog: {
       heading: "\u66f4\u65b0\u5386\u53f2",
       releases: [
+        {
+          version: "v0.1.0-beta.8",
+          date: "2026-05-10",
+          badge: "UI \u4f18\u5316",
+          items: [
+            "\u81ea\u52a8\u540c\u6b65\u9762\u677f\u91cd\u6784\uff1a\u5f00\u5173\u79fb\u9664\u6df1\u8272\u5361\u7247\u80cc\u666f\uff0c\u6539\u4e3a label \u5728\u4e0a + \u5f00\u5173\u884c\u6a2a\u5411\u5e03\u5c40",
+            "\u5f00\u5173\u5c3a\u5bf8\u653e\u5927\u81f3 56\u00d732\uff0c\u5173\u95ed\u6001\u589e\u52a0\u53ef\u89c1\u8fb9\u6846",
+            "\u5168\u5bbd\u586b\u5145\u8272\u4fdd\u5b58\u6309\u94ae\uff08\u4e3b\u9898\u7eff + \u6df1\u8272\u6587\u5b57\uff09\uff0c\u66ff\u4ee3\u63cf\u8fb9\u6309\u94ae",
+            "\u72b6\u6001\u6587\u5b57\u4e09\u6bb5\u903b\u8f91\uff1a\u5173\u95ed\u2192\u5df2\u5173\u95ed\u3001\u5f00\u542f\u2192\u5df2\u5f00\u542f\u3001\u6709\u4e0b\u6b21\u65f6\u95f4\u2192\u4e0b\u6b21\u6267\u884c",
+            "\u4fdd\u5b58\u6210\u529f\u63d0\u793a\u6539\u4e3a 2 \u79d2\u81ea\u52a8\u6d88\u5931 Toast",
+            "\u5206\u7c7b\u7ba1\u7406\u5217\u8868\u53bb\u6389 pill \u80f6\u56ca\u6837\u5f0f\uff0c\u6539\u4e3a\u5de6\u4fa7 4px \u5f69\u8272\u7ad6\u6761 + \u5de6\u5bf9\u9f50\u6587\u5b57",
+            "\u5206\u7c7b\u5217\u8868\u6bcf\u884c\u5e95\u90e8\u5206\u9694\u7ebf\u52a0\u6df1\uff0c\u5217\u8868\u4e0e\u6dfb\u52a0\u533a\u57df\u4e4b\u95f4\u52a0\u5206\u9694\u7ebf",
+            "\u91cd\u547d\u540d/\u5220\u9664\u6309\u94ae\u7edf\u4e00 28px \u9ad8\u5ea6\uff0c\u5217\u8868\u66f4\u7d27\u51d1",
+            "\u89c4\u5219\u7ba1\u7406\u4e0b\u62c9\u6846\u6c49\u5316\uff08\u4e3b\u9898/\u5173\u952e\u8bcd/\u8bed\u8a00\uff09\uff0c\u805a\u7126\u65f6 box-shadow \u6539\u5584",
+            "\u540e\u53f0\u6807\u9898\u533a\u300c\u540e\u53f0\u6a21\u5f0f\u300d\u6807\u7b7e\u6539\u4e3a\u526f\u6807\u9898\uff0c\u878d\u5165\u6807\u9898\u5c42\u7ea7",
+            "\u5206\u7c7b\u89c4\u5219\u63cf\u8ff0\u6587\u5b57\u300cTopic \u5339\u914d\u300d\u6539\u4e3a\u300c\u4e3b\u9898\u5339\u914d\u300d"
+          ]
+        },
         {
           version: "v0.1.0-beta.7",
           date: "2026-05-10",
@@ -155,7 +175,6 @@ export const CHANGELOG_CONTENT = {
         "继续增强规则分类覆盖率",
         "补齐自部署文档与升级说明",
         "继续打磨后台整理流程",
-        "自动化定时同步",
         "准备正式版发布"
       ]
     }
@@ -167,8 +186,8 @@ export const CHANGELOG_CONTENT = {
     close: "Close",
     currentVersion: {
       heading: "Current Version",
-      version: "v0.1.0-beta.7",
-      summary: "Project drawer UX and editing refinement",
+      version: "v0.1.0-beta.8",
+      summary: "Admin panel UI polish and refinement",
       badge: "Beta"
     },
     capabilities: {
@@ -187,12 +206,32 @@ export const CHANGELOG_CONTENT = {
         "Custom classification rule management",
         "Maintenance activity display (Release / Commit time)",
         "Multiple sort options (Star time, Updated, Stars, Name)",
-        "Scheduled auto-sync (optional, configurable in admin)"
+        "Scheduled auto-sync (optional, configurable in admin)",
+        "Polished category management list with consistent action buttons",
+        "Full-width filled save button with auto-dismiss toast in auto-sync panel"
       ]
     },
     changelog: {
       heading: "Changelog",
       releases: [
+        {
+          version: "v0.1.0-beta.8",
+          date: "2026-05-10",
+          badge: "UI Refinement",
+          items: [
+            "Redesigned auto-sync panel: switch removed from dark card, now label-above with inline switch row",
+            "Enlarged toggle to 56×32 with visible off-state border",
+            "Full-width filled save button (brand green + dark text), replacing outline style",
+            "Three-state status logic: off→disabled, on→enabled, on+scheduled→next run time",
+            "Success toast auto-dismisses after 2 seconds",
+            "Replaced pill/chip category labels with 4px colored bar + left-aligned text",
+            "Deeper row separators and divider between category list and add-area",
+            "Unified rename/delete buttons at 28px height for compact list rows",
+            "Localized rule type dropdown (Topic/Keyword/Language → Chinese labels) with focus shadow",
+            "Moved admin eyebrow badge into subtitle beneath page title",
+            "Fixed 'Topic matching' → '主题匹配' in rules description"
+          ]
+        },
         {
           version: "v0.1.0-beta.7",
           date: "2026-05-10",
@@ -305,7 +344,6 @@ export const CHANGELOG_CONTENT = {
         "Stronger rule-based categorization",
         "Self-hosted deployment documentation",
         "More polished admin workflows",
-        "Automated scheduled sync",
         "Formal release preparation"
       ]
     }
