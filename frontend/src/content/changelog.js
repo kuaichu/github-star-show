@@ -1,15 +1,9 @@
 export const BUILT_WITH = [
-  "Codex",
-  "GPT-5.4",
-  "DeepSeek V4",
-  "Vue 3",
-  "Vite",
-  "Express",
-  "Prisma",
-  "SQLite",
-  "Cloudflare Pages",
-  "1Panel",
-  "PM2"
+  { category: "AI / 模型", items: ["DeepSeek V4", "GPT-5.4"] },
+  { category: "开发工具", items: ["Codex", "Claude Code"] },
+  { category: "前端 / 框架", items: ["Vue 3", "Vite"] },
+  { category: "后端", items: ["Express", "Prisma", "SQLite"] },
+  { category: "部署 / 运维", items: ["Cloudflare Pages", "1Panel", "PM2"] }
 ];
 
 export const CHANGELOG_CONTENT = {

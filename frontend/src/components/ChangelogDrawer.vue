@@ -30,8 +30,11 @@
 
     <section class="detail-panel">
       <h3>{{ copy.builtWith.heading }}</h3>
-      <div class="chip-row">
-        <span v-for="item in copy.builtWith.items" :key="item" class="chip">{{ item }}</span>
+      <div v-for="group in copy.builtWith.items" :key="group.category" class="tech-stack-group">
+        <span class="tech-stack-category">{{ group.category }}</span>
+        <div class="tech-stack-row">
+          <span v-for="item in group.items" :key="item" class="chip tech">{{ item }}</span>
+        </div>
       </div>
     </section>
 
