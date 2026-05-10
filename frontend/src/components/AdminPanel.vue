@@ -78,9 +78,9 @@
 
       <div class="rule-form-row">
         <select v-model="ruleForm.matchType" class="select rule-form-select">
-          <option value="topic">Topic</option>
-          <option value="keyword">Keyword</option>
-          <option value="language">Language</option>
+          <option value="topic">主题</option>
+          <option value="keyword">关键词</option>
+          <option value="language">语言</option>
         </select>
         <input
           v-model="ruleForm.matchValue"
@@ -499,9 +499,9 @@ async function loadRules() {
 }
 
 function ruleTypeLabel(type) {
-  if (type === "topic") return "Topic";
-  if (type === "keyword") return "Keyword";
-  if (type === "language") return "Language";
+  if (type === "topic") return "主题";
+  if (type === "keyword") return "关键词";
+  if (type === "language") return "语言";
   return type;
 }
 
