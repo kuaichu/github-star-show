@@ -1,6 +1,7 @@
 export const BUILT_WITH = [
   "Codex",
   "GPT-5.4",
+  "DeepSeek V4",
   "Vue 3",
   "Vite",
   "Express",
