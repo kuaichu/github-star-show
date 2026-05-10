@@ -153,7 +153,7 @@
 
         <div class="auto-sync-actions">
           <button class="button auto-sync-save" type="button" :disabled="autoSyncSaving" @click="saveAutoSync">
-            {{ autoSyncSaving ? t("common.loadingShort") : t("admin.save") }}
+            {{ autoSyncSaving ? t("common.loadingShort") : t("admin.autoSyncSaveBtn") }}
           </button>
           <transition name="toast-fade">
             <span v-if="autoSyncMessage" class="auto-sync-toast">{{ autoSyncMessage }}</span>

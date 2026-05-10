@@ -266,7 +266,8 @@ const messages = {
       autoSyncDisabled: "自动同步已关闭",
       autoSyncEnabled: "自动同步已开启",
       autoSyncSaved: "自动同步设置已保存",
-      autoSyncSaveFailed: "保存自动同步设置失败"
+      autoSyncSaveFailed: "保存自动同步设置失败",
+      autoSyncSaveBtn: "保存设置"
     },
     quickFilters: {
       recommended: "推荐",
@@ -534,7 +535,8 @@ const messages = {
       autoSyncDisabled: "Auto sync is disabled",
       autoSyncEnabled: "Auto sync is on",
       autoSyncSaved: "Auto sync settings saved",
-      autoSyncSaveFailed: "Failed to save auto sync settings"
+      autoSyncSaveFailed: "Failed to save auto sync settings",
+      autoSyncSaveBtn: "Save Settings"
     },
     quickFilters: {
       recommended: "Recommended",
