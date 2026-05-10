@@ -1994,7 +1994,7 @@ body::after {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .admin-category-row-actions {
@@ -2006,7 +2006,7 @@ body::after {
 .category-name-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 .category-marker {
@@ -2029,15 +2029,15 @@ body::after {
 
 /* Consistent small buttons for rename/delete */
 .ghost-button-small {
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 10px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.02);
   color: var(--text);
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   transition: 0.2s ease;
   display: inline-flex;
   align-items: center;
@@ -2052,7 +2052,7 @@ body::after {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 12px;
   margin-top: 4px;
 }
@@ -2228,15 +2228,15 @@ body::after {
 }
 
 .danger-button-small {
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 10px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 107, 107, 0.3);
   background: rgba(255, 107, 107, 0.08);
   color: #ff6b6b;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   transition: 0.2s ease;
 }
 
