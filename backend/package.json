@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "test": "prisma generate && node --test --test-concurrency=1",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
+    "prisma:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js"
   },
   "dependencies": {

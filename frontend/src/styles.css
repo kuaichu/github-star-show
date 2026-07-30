@@ -858,6 +858,12 @@ body::after {
   border-color: var(--line-strong);
 }
 
+.button-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .ghost-button,
 .action-link {
   background: rgba(255, 255, 255, 0.02);

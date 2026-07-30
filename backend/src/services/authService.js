@@ -1,4 +1,6 @@
 import { getPrisma } from "../lib/prisma.js";
+import { requestJson } from "../lib/httpClient.js";
+import { encryptGithubToken } from "../lib/tokenCrypto.js";
 
 export async function exchangeGithubCode(code) {
   const clientId = process.env.GITHUB_CLIENT_ID;
@@ -8,7 +10,7 @@ export async function exchangeGithubCode(code) {
     throw new Error("Missing GitHub OAuth config.");
   }
 
-  const response = await fetch("https://github.com/login/oauth/access_token", {
+  const response = await requestJson("https://github.com/login/oauth/access_token", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -20,9 +22,12 @@ export async function exchangeGithubCode(code) {
       client_secret: clientSecret,
       code
     })
+  }, {
+    service: "GitHub OAuth",
+    idempotent: false
   });
 
-  const data = await response.json();
+  const data = response.data;
 
   if (!response.ok || !data.access_token) {
     throw new Error(data.error_description || "GitHub OAuth exchange failed.");
@@ -35,20 +40,22 @@ export async function exchangeGithubCode(code) {
 }
 
 export async function fetchGithubUser(accessToken) {
-  const response = await fetch("https://api.github.com/user", {
+  const response = await requestJson("https://api.github.com/user", {
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${accessToken}`,
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "github-star-show"
     }
+  }, {
+    service: "GitHub"
   });
 
   if (!response.ok) {
     throw new Error("Unable to fetch GitHub user profile.");
   }
 
-  const data = await response.json();
+  const data = response.data;
   return {
     githubUserId: String(data.id),
     login: data.login,
@@ -62,17 +69,9 @@ export async function fetchGithubUser(accessToken) {
 export async function persistGithubUser(profile, scope = "") {
   const prisma = getPrisma();
 
-  if (!prisma) {
-    return {
-      id: profile.githubUserId,
-      dbUserId: Number(profile.githubUserId),
-      login: profile.login,
-      name: profile.name,
-      avatarUrl: profile.avatarUrl,
-      profileUrl: profile.profileUrl,
-      accessToken: profile.accessToken
-    };
-  }
+  if (!prisma) throw new Error("Database not available");
+
+  const encryptedAccessToken = encryptGithubToken(profile.accessToken);
 
   const account = await prisma.githubAccount.upsert({
     where: { githubUserId: profile.githubUserId },
@@ -81,7 +80,7 @@ export async function persistGithubUser(profile, scope = "") {
       name: profile.name,
       avatarUrl: profile.avatarUrl,
       profileUrl: profile.profileUrl,
-      accessToken: profile.accessToken,
+      accessToken: encryptedAccessToken,
       scope,
       user: {
         update: {
@@ -98,7 +97,7 @@ export async function persistGithubUser(profile, scope = "") {
       name: profile.name,
       avatarUrl: profile.avatarUrl,
       profileUrl: profile.profileUrl,
-      accessToken: profile.accessToken,
+      accessToken: encryptedAccessToken,
       scope,
       user: {
         create: {
@@ -121,6 +120,6 @@ export async function persistGithubUser(profile, scope = "") {
     name: account.user.name || account.name || account.login,
     avatarUrl: account.user.avatarUrl || account.avatarUrl,
     profileUrl: account.user.profileUrl || account.profileUrl,
-    accessToken: account.accessToken
+    accessToken: profile.accessToken
   };
 }

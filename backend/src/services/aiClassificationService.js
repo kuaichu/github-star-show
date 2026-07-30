@@ -1,6 +1,14 @@
+import "dotenv/config";
 import { fetchRepository } from "./githubService.js";
-import { updateProjectAiClassification } from "./projectService.js";
+import { saveAutomaticClassificationIfUnchanged } from "./userProjectService.js";
 import { CATEGORY_LABELS } from "./classificationService.js";
+import { NetworkRequestError, requestJson } from "../lib/httpClient.js";
+import {
+  OperationLeaseLostError,
+  withOperationLease,
+  withOperationLeaseTransaction
+} from "./operationLeaseService.js";
+import { PublicHttpError } from "../lib/publicHttpError.js";
 
 export const AI_CATEGORY_OPTIONS = [
   CATEGORY_LABELS.ai,
@@ -13,19 +21,34 @@ export const AI_CATEGORY_OPTIONS = [
   CATEGORY_LABELS.uncategorized
 ];
 
-const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.openai.com/v1";
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-
 function parseBooleanEnv(value, defaultValue = false) {
   if (value === undefined) return defaultValue;
   return String(value).toLowerCase() === "true";
 }
 
 function getMaxPerRun(limit) {
-  const raw = limit ?? process.env.AI_CLASSIFICATION_MAX_PER_RUN ?? 25;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) return 25;
-  return Math.min(value, 100);
+  const configured = Number(process.env.AI_CLASSIFICATION_MAX_PER_RUN ?? 25);
+  const configuredLimit = Number.isInteger(configured) && configured > 0
+    ? Math.min(configured, 100)
+    : 25;
+  if (limit === undefined || limit === null) return configuredLimit;
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new PublicHttpError("INVALID_AI_LIMIT", 400, "limit must be a positive integer");
+  }
+  return Math.min(limit, configuredLimit);
+}
+
+function getAiModel() {
+  return process.env.OPENAI_MODEL || "gpt-4o-mini";
+}
+
+function getOpenAiBaseUrl() {
+  return String(process.env.OPENAI_API_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
+}
+
+function getAiCooldownSeconds() {
+  const value = Number(process.env.AI_CLASSIFICATION_COOLDOWN_SECONDS ?? 300);
+  return Number.isInteger(value) && value >= 1 && value <= 86_400 ? value : 300;
 }
 
 function shouldUseAiClassification() {
@@ -111,15 +134,16 @@ function parseResponseJson(data) {
   throw new Error("OpenAI response did not contain structured output.");
 }
 
-async function fetchReadmeSnippet(project) {
+async function fetchReadmeSnippet(project, accessToken = "") {
   if (!shouldIncludeReadme()) {
     return "";
   }
 
   try {
-    const repository = await fetchRepository(project.github);
+    const repository = await fetchRepository(project.github, accessToken);
     return repository.readme || "";
-  } catch {
+  } catch (error) {
+    if (error instanceof NetworkRequestError && error.rateLimited) throw error;
     return "";
   }
 }
@@ -127,26 +151,30 @@ async function fetchReadmeSnippet(project) {
 export function getAiClassificationConfig() {
   return {
     enabled: shouldUseAiClassification(),
-    model: DEFAULT_MODEL,
+    model: getAiModel(),
     maxPerRun: getMaxPerRun(),
     includeReadme: shouldIncludeReadme()
   };
 }
 
-export async function classifyProjectWithAi(project) {
+export async function classifyProjectWithAi(project, options = {}) {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("Missing OPENAI_API_KEY.");
   }
 
-  const readme = await fetchReadmeSnippet(project);
-  const response = await fetch(`${OPENAI_API_BASE_URL}/responses`, {
+  options.signal?.throwIfAborted();
+  const model = getAiModel();
+  const readme = await fetchReadmeSnippet(project, options.accessToken || "");
+  options.signal?.throwIfAborted();
+  const response = await requestJson(`${getOpenAiBaseUrl()}/responses`, {
     method: "POST",
+    signal: options.signal,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
     },
     body: JSON.stringify({
-      model: DEFAULT_MODEL,
+      model,
       input: buildPrompt(project, readme),
       text: {
         format: {
@@ -157,9 +185,12 @@ export async function classifyProjectWithAi(project) {
         }
       }
     })
+  }, {
+    service: "OpenAI",
+    idempotent: false
   });
 
-  const data = await response.json();
+  const data = response.data;
 
   if (!response.ok) {
     throw new Error(data.error?.message || "OpenAI classification failed.");
@@ -178,16 +209,80 @@ export async function classifyProjectWithAi(project) {
     category: parsed.category,
     confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
     reason: String(parsed.reason || "").trim(),
-    model: DEFAULT_MODEL,
+    model,
     classifiedAt: new Date()
   };
 }
 
 function shouldClassifyProject(project, force) {
   if (force) return true;
+  if (project.categorySource === "manual") return false;
   if (!project.aiCategory) return true;
   if (project.categorySource !== "ai" && project.category === CATEGORY_LABELS.uncategorized) return true;
   return false;
+}
+
+async function performAiClassification(projects, options, config, maxPerRun) {
+  const force = options.force ?? false;
+  const user = options.user;
+  const candidates = projects.filter(project => shouldClassifyProject(project, force)).slice(0, maxPerRun);
+  const results = [];
+
+  for (const project of candidates) {
+    options.signal?.throwIfAborted();
+    let classification;
+    try {
+      classification = await classifyProjectWithAi(project, {
+        accessToken: user.accessToken || "",
+        signal: options.signal
+      });
+    } catch (error) {
+      if ((error instanceof NetworkRequestError && error.rateLimited) ||
+          error instanceof OperationLeaseLostError) {
+        throw error;
+      }
+      results.push({
+        id: project.id,
+        name: project.name,
+        error: "AI classification failed."
+      });
+      continue;
+    }
+
+    options.signal?.throwIfAborted();
+    const updatedProject = await withOperationLeaseTransaction(options.lease, tx =>
+      saveAutomaticClassificationIfUnchanged(user, project, {
+        category: classification.category,
+        categorySource: "ai",
+        categoryReason: classification.reason ? `ai:${classification.reason}` : "ai:classified",
+        aiCategory: classification.category,
+        aiConfidence: classification.confidence,
+        aiReason: classification.reason,
+        aiModel: classification.model,
+        aiClassifiedAt: classification.classifiedAt
+      }, { client: tx })
+    );
+    if (updatedProject) {
+      results.push(updatedProject);
+    } else {
+      results.push({
+        id: project.id,
+        name: project.name,
+        skipped: true,
+        conflicted: true
+      });
+    }
+  }
+
+  return {
+    enabled: true,
+    processed: candidates.length,
+    updated: results.filter(item => !item.error && !item.skipped).length,
+    skipped: Math.max(projects.length - candidates.length, 0)
+      + results.filter(item => item.skipped).length,
+    items: results,
+    model: config.model
+  };
 }
 
 export async function classifyProjectsWithAi(projects, options = {}) {
@@ -203,33 +298,27 @@ export async function classifyProjectsWithAi(projects, options = {}) {
     };
   }
 
-  const force = Boolean(options.force);
-  const maxPerRun = getMaxPerRun(options.limit);
-  const candidates = projects.filter(project => shouldClassifyProject(project, force)).slice(0, maxPerRun);
-  const results = [];
-
-  for (const project of candidates) {
-    try {
-      const classification = await classifyProjectWithAi(project);
-      const updatedProject = await updateProjectAiClassification(project.id, classification);
-      if (updatedProject) {
-        results.push(updatedProject);
-      }
-    } catch (error) {
-      results.push({
-        id: project.id,
-        name: project.name,
-        error: error.message || "AI classification failed."
-      });
-    }
+  const user = options.user;
+  if (!user) {
+    throw new Error("A user is required for AI classification.");
   }
+  if (options.force !== undefined && typeof options.force !== "boolean") {
+    throw new PublicHttpError("INVALID_AI_FORCE", 400, "force must be a boolean");
+  }
+  const maxPerRun = getMaxPerRun(options.limit);
+  const userId = Number(user.dbUserId || user.id);
+  if (!Number.isInteger(userId) || userId <= 0) throw new Error("A positive userId is required");
 
-  return {
-    enabled: true,
-    processed: candidates.length,
-    updated: results.filter(item => !item.error).length,
-    skipped: Math.max(projects.length - candidates.length, 0),
-    items: results,
-    model: config.model
-  };
+  return withOperationLease({
+    key: `classification:${userId}`,
+    userId,
+    kind: "ai",
+    respectCooldown: true,
+    cooldownSeconds: getAiCooldownSeconds()
+  }, (lease, signal) => performAiClassification(
+    projects,
+    { ...options, signal, lease },
+    config,
+    maxPerRun
+  ));
 }

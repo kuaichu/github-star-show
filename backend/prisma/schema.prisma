@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Project {
-  id           Int           @id
+  id           Int           @id @default(autoincrement())
   name         String
   author       String
   category     String
@@ -33,6 +33,8 @@ model Project {
   latestReleaseAt DateTime?
   latestCommitAt DateTime?
   activityCheckedAt DateTime?
+  publicVisible Boolean       @default(false)
+  visibilityVerifiedAt DateTime?
   userProjects UserProject[]
 }
 
@@ -76,6 +78,14 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model OAuthState {
+  stateHash String   @id
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 model UserProject {
   id           Int      @id @default(autoincrement())
   userId       Int
@@ -90,6 +100,11 @@ model UserProject {
   docs         String
   tags         String
   features     String
+  aiCategory   String?
+  aiConfidence Float?
+  aiReason     String?
+  aiModel      String?
+  aiClassifiedAt DateTime?
   source       String   @default("github_star")
   remoteStatus String   @default("active")
   remoteStatusNote String @default("")
@@ -105,12 +120,31 @@ model UserProject {
 }
 
 model SyncRun {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  source    String
-  total     Int      @default(0)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  source         String
+  status         String    @default("running")
+  total          Int       @default(0)
+  skippedPrivate Int       @default(0)
+  errorCode      String?
+  errorSummary   String?
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OperationLease {
+  key           String    @id
+  userId        Int
+  kind          String
+  owner         String    @default("")
+  generation    Int       @default(0)
+  expiresAt     DateTime?
+  cooldownUntil DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, kind])
 }
 
 model ManagedCategory {

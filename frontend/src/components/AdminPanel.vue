@@ -169,7 +169,7 @@
       <aside class="admin-list">
         <div class="admin-list-head">
           <h3>{{ t("admin.listTitle") }}</h3>
-          <button class="button" type="button" @click="$emit('create')">{{ t("admin.newProject") }}</button>
+          <button class="button" type="button" :disabled="saving" @click="$emit('create')">{{ t("admin.newProject") }}</button>
         </div>
 
         <div class="admin-filter-row">
@@ -189,6 +189,7 @@
           class="admin-list-item"
           :class="{ active: selectedProject && selectedProject.id === item.id }"
           type="button"
+          :disabled="saving"
           @click="$emit('select', item.id)"
         >
           <strong>{{ item.name }}</strong>
@@ -208,6 +209,7 @@
               v-if="isCreateMode"
               class="ghost-button"
               type="button"
+              :disabled="saving"
               @click="$emit('cancel-create')"
             >
               {{ cancelCreateLabel }}
@@ -216,6 +218,7 @@
               v-if="!isCreateMode && selectedProject"
               class="danger-button"
               type="button"
+              :disabled="saving"
               @click="openDeleteModal"
             >
               {{ t("admin.deleteProject") }}
@@ -223,6 +226,7 @@
           </div>
 
           <form class="admin-form" @submit.prevent="$emit('save')">
+            <fieldset class="admin-form-fields" :disabled="saving">
             <div v-if="selectedProject && selectedProject.aiCategory" class="full admin-message">
               {{ t("admin.aiCategory") }}: {{ selectedProject.aiCategory }}
               <span v-if="selectedProject.aiConfidence !== null && selectedProject.aiConfidence !== undefined">
@@ -303,6 +307,7 @@
               <button class="ghost-button" type="button" @click="$emit('reset')">{{ t("admin.reset") }}</button>
             </div>
             <p v-if="message" class="admin-message">{{ message }}</p>
+            </fieldset>
           </form>
         </div>
       </Transition>
@@ -395,6 +400,7 @@ const props = defineProps({
   featuresText: String,
   tagsText: String,
   message: String,
+  saving: Boolean,
   importRepo: String,
   importMessage: String,
   canManageStars: Boolean,
@@ -661,3 +667,9 @@ onMounted(() => {
   loadAutoSyncConfig();
 });
 </script>
+
+<style scoped>
+.admin-form-fields {
+  display: contents;
+}
+</style>

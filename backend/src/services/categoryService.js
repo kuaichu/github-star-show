@@ -1,13 +1,34 @@
+import { Prisma } from "@prisma/client";
 import { getPrisma } from "../lib/prisma.js";
+import { PublicHttpError } from "../lib/publicHttpError.js";
 import { CATEGORY_LABELS } from "../config/classificationRules.js";
 
 const DEFAULT_CATEGORY_NAMES = Object.values(CATEGORY_LABELS).filter(
   label => label !== CATEGORY_LABELS.uncategorized
 );
 
+function requireUserId(userId) {
+  const value = Number(userId);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new PublicHttpError("INVALID_USER_ID", 400, "A positive userId is required");
+  }
+  return value;
+}
+
+function requireCategoryName(name, message = "Category name is required") {
+  const value = String(name ?? "").trim();
+  if (!value) throw new PublicHttpError("INVALID_CATEGORY_NAME", 400, message);
+  return value;
+}
+
+function isUniqueConstraintError(error) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
 export async function seedDefaultCategories(userId) {
+  userId = requireUserId(userId);
   const prisma = getPrisma();
-  if (!prisma) return [];
+  if (!prisma) throw new Error("Database not available");
 
   const seeded = [];
   for (const name of DEFAULT_CATEGORY_NAMES) {
@@ -17,7 +38,7 @@ export async function seedDefaultCategories(userId) {
       });
       seeded.push(cat);
     } catch (err) {
-      if (err.code !== "P2002") {
+      if (!isUniqueConstraintError(err)) {
         throw err;
       }
     }
@@ -26,111 +47,109 @@ export async function seedDefaultCategories(userId) {
 }
 
 export async function listManagedCategories(userId) {
-  const prisma = getPrisma();
-  if (!prisma) return [];
-
-  try {
-    const cats = await prisma.managedCategory.findMany({
-      where: { userId },
-      orderBy: { name: "asc" }
-    });
-    if (cats.length === 0 && userId) {
-      return await seedDefaultCategories(userId);
-    }
-    return cats;
-  } catch {
-    return [];
-  }
-}
-
-export async function createManagedCategory(userId, name) {
+  userId = requireUserId(userId);
   const prisma = getPrisma();
   if (!prisma) throw new Error("Database not available");
 
-  const trimmed = String(name || "").trim();
-  if (!trimmed) throw new Error("Category name is required");
+  const cats = await prisma.managedCategory.findMany({
+    where: { userId },
+    orderBy: { name: "asc" }
+  });
+  if (cats.length === 0) {
+    return seedDefaultCategories(userId);
+  }
+  return cats;
+}
+
+export async function createManagedCategory(userId, name) {
+  userId = requireUserId(userId);
+  const prisma = getPrisma();
+  if (!prisma) throw new Error("Database not available");
+
+  const trimmed = requireCategoryName(name);
 
   try {
     return await prisma.managedCategory.create({
       data: { userId, name: trimmed }
     });
   } catch (err) {
-    if (err.code === "P2002") {
-      throw new Error(`Category "${trimmed}" already exists`);
+    if (isUniqueConstraintError(err)) {
+      throw new PublicHttpError("CATEGORY_ALREADY_EXISTS", 400, `Category "${trimmed}" already exists`);
     }
     throw err;
   }
 }
 
 export async function renameManagedCategory(userId, oldName, newName) {
+  userId = requireUserId(userId);
   const prisma = getPrisma();
   if (!prisma) throw new Error("Database not available");
 
-  const trimmedNew = String(newName || "").trim();
-  if (!trimmedNew) throw new Error("New category name is required");
-
-  const category = await prisma.managedCategory.findFirst({
-    where: { userId, name: oldName }
-  });
-
-  if (!category) {
-    throw new Error(`Category "${oldName}" not found`);
-  }
+  const trimmedOld = requireCategoryName(oldName);
+  const trimmedNew = requireCategoryName(newName, "New category name is required");
 
   try {
-    await prisma.managedCategory.update({
-      where: { id: category.id },
-      data: { name: trimmedNew }
+    await prisma.$transaction(async tx => {
+      const category = await tx.managedCategory.findFirst({
+        where: { userId, name: trimmedOld }
+      });
+
+      if (!category) {
+        throw new PublicHttpError("CATEGORY_NOT_FOUND", 400, `Category "${trimmedOld}" not found`);
+      }
+
+      await tx.managedCategory.update({
+        where: { id: category.id },
+        data: { name: trimmedNew }
+      });
+
+      await tx.userProject.updateMany({
+        where: { userId, category: trimmedOld },
+        data: { category: trimmedNew }
+      });
     });
   } catch (err) {
-    if (err.code === "P2002") {
-      throw new Error(`Category "${trimmedNew}" already exists`);
+    if (isUniqueConstraintError(err)) {
+      throw new PublicHttpError("CATEGORY_ALREADY_EXISTS", 400, `Category "${trimmedNew}" already exists`);
     }
     throw err;
   }
 
-  await prisma.project.updateMany({
-    where: { category: oldName },
-    data: { category: trimmedNew }
-  });
-
-  await prisma.userProject.updateMany({
-    where: { category: oldName },
-    data: { category: trimmedNew }
-  });
-
-  return { oldName, newName: trimmedNew };
+  return { oldName: trimmedOld, newName: trimmedNew };
 }
 
 export async function deleteManagedCategory(userId, name) {
+  userId = requireUserId(userId);
   const prisma = getPrisma();
   if (!prisma) throw new Error("Database not available");
-
-  const category = await prisma.managedCategory.findFirst({
-    where: { userId, name }
-  });
-
-  if (!category) {
-    throw new Error(`Category "${name}" not found`);
-  }
-
-  await prisma.managedCategory.delete({
-    where: { id: category.id }
-  });
+  const trimmedName = requireCategoryName(name);
 
   const uncategorizedLabel = CATEGORY_LABELS.uncategorized || "未分类 / 待整理";
 
-  await prisma.project.updateMany({
-    where: { category: name },
-    data: { category: uncategorizedLabel, categorySource: "uncategorized", categoryReason: "uncategorized:category-deleted" }
+  await prisma.$transaction(async tx => {
+    const category = await tx.managedCategory.findFirst({
+      where: { userId, name: trimmedName }
+    });
+
+    if (!category) {
+      throw new PublicHttpError("CATEGORY_NOT_FOUND", 400, `Category "${trimmedName}" not found`);
+    }
+
+    await tx.managedCategory.delete({
+      where: { id: category.id }
+    });
+
+    await tx.userProject.updateMany({
+      where: { userId, category: trimmedName },
+      data: {
+        category: uncategorizedLabel,
+        categorySource: "uncategorized",
+        categoryReason: "uncategorized:category-deleted"
+      }
+    });
   });
 
-  await prisma.userProject.updateMany({
-    where: { category: name },
-    data: { category: uncategorizedLabel, categorySource: "uncategorized", categoryReason: "uncategorized:category-deleted" }
-  });
-
-  return { deleted: name, projectsReassigned: true };
+  return { deleted: trimmedName, projectsReassigned: true };
 }
 
 export async function getAllCategories(userId) {
@@ -138,6 +157,6 @@ export async function getAllCategories(userId) {
     return DEFAULT_CATEGORY_NAMES;
   }
 
-  const managed = await listManagedCategories(userId);
+  const managed = await listManagedCategories(requireUserId(userId));
   return managed.map(c => c.name);
 }

@@ -6,6 +6,12 @@ dist
 Thumbs.db
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
+backend/prisma/dev.db-wal
+backend/prisma/dev.db-shm
+*.before-migrate.*.bak
+*.before-migrate.*.bak-journal
+*.before-migrate.*.bak-wal
+*.before-migrate.*.bak-shm
 
 # Docs (local only)
 /Documents/

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { createAsyncRouter } from "../lib/asyncHandler.js";
 import { getSessionUser } from "../lib/sessionStore.js";
 import {
   listRules,
@@ -6,10 +6,13 @@ import {
   updateRule,
   deleteRule
 } from "../services/ruleService.js";
+import { setPrivateNoStore } from "../lib/cacheControl.js";
+import { trySendPublicHttpError } from "../lib/publicHttpError.js";
 
-const router = Router();
+const router = createAsyncRouter();
 
 router.get("/", async (req, res) => {
+  setPrivateNoStore(res);
   const user = await getSessionUser(req);
   if (!user) {
     res.json({ rules: [] });
@@ -31,7 +34,7 @@ router.post("/", async (req, res) => {
     const rule = createRule(user.dbUserId || user.id, req.body);
     res.status(201).json(rule);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (!trySendPublicHttpError(res, err)) throw err;
   }
 });
 
@@ -46,7 +49,7 @@ router.put("/:id", async (req, res) => {
     const rule = updateRule(user.dbUserId || user.id, req.params.id, req.body);
     res.json(rule);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (!trySendPublicHttpError(res, err)) throw err;
   }
 });
 
@@ -61,7 +64,7 @@ router.delete("/:id", async (req, res) => {
     deleteRule(user.dbUserId || user.id, req.params.id);
     res.json({ deleted: true });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (!trySendPublicHttpError(res, err)) throw err;
   }
 });
 

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { createAsyncRouter } from "../lib/asyncHandler.js";
 import { getSessionUser } from "../lib/sessionStore.js";
 import {
   listManagedCategories,
@@ -6,24 +6,23 @@ import {
   renameManagedCategory,
   deleteManagedCategory
 } from "../services/categoryService.js";
+import { trySendPublicHttpError } from "../lib/publicHttpError.js";
+import { setPrivateNoStore } from "../lib/cacheControl.js";
 
-const router = Router();
+const router = createAsyncRouter();
 
 router.get("/managed", async (req, res) => {
-  try {
-    const user = await getSessionUser(req);
-    if (!user) {
-      res.json({ categories: [] });
-      return;
-    }
-
-    const categories = await listManagedCategories(user.dbUserId);
-    res.json({
-      categories: categories.map(c => ({ id: c.id, name: c.name, createdAt: c.createdAt }))
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  setPrivateNoStore(res);
+  const user = await getSessionUser(req);
+  if (!user) {
+    res.json({ categories: [] });
+    return;
   }
+
+  const categories = await listManagedCategories(user.dbUserId);
+  res.json({
+    categories: categories.map(c => ({ id: c.id, name: c.name, createdAt: c.createdAt }))
+  });
 });
 
 router.post("/managed", async (req, res) => {
@@ -37,7 +36,7 @@ router.post("/managed", async (req, res) => {
     const result = await createManagedCategory(user.dbUserId, req.body.name);
     res.status(201).json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (!trySendPublicHttpError(res, err)) throw err;
   }
 });
 
@@ -52,7 +51,7 @@ router.put("/managed/:name", async (req, res) => {
     const result = await renameManagedCategory(user.dbUserId, req.params.name, req.body.newName);
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (!trySendPublicHttpError(res, err)) throw err;
   }
 });
 
@@ -67,7 +66,7 @@ router.delete("/managed/:name", async (req, res) => {
     const result = await deleteManagedCategory(user.dbUserId, req.params.name);
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (!trySendPublicHttpError(res, err)) throw err;
   }
 });
 

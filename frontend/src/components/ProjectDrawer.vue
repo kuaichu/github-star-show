@@ -161,9 +161,9 @@
               <p class="detail-hint">{{ tabCopy.readmeHint }}</p>
             </div>
             <a
-              v-if="project.github"
+              v-if="readmeHref"
               class="action-link compact"
-              :href="`${project.github}#readme`"
+              :href="readmeHref"
               target="_blank"
               rel="noreferrer"
             >
@@ -194,13 +194,19 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
-import { updateProject } from "../api/projects";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowReactive, watch } from "vue";
 import { locale, t, translateCategory, translateRemoteStatus, translateStatus } from "../i18n";
+import { safeExternalHref } from "../lib/externalUrl";
+import {
+  isLatestProjectMutation,
+  isProjectMutationBusy,
+  queueProjectUpdate
+} from "../lib/projectMutationQueue";
 
 const props = defineProps({
   visible: Boolean,
   project: Object,
+  mutationBlocked: { type: Boolean, default: false },
   categories: { type: Array, default: () => [] },
   formatDate: Function,
   formatNumber: Function
@@ -210,12 +216,26 @@ const emit = defineEmits(["close", "saved"]);
 
 const activeTab = ref("overview");
 const editing = ref(false);
-const saving = ref(false);
+const editSessionGeneration = ref(0);
+const drawerPendingMutations = shallowReactive(new Map());
+const saving = computed(() => {
+  if (props.mutationBlocked) return true;
+  const projectId = props.project?.id;
+  if (!projectId || !isProjectMutationBusy(projectId)) return false;
+  const localPending = drawerPendingMutations.get(projectId);
+  return !localPending || localPending === editSessionGeneration.value;
+});
 const editMessage = ref("");
 const drawerRef = ref(null);
 const readmePreviewRef = ref(null);
 let lockedScrollY = 0;
 const editForm = reactive({
+  category: "",
+  status: "",
+  note: "",
+  recommended: false
+});
+const editBaseline = reactive({
   category: "",
   status: "",
   note: "",
@@ -230,19 +250,25 @@ const categoryOptions = computed(() => {
 
 function initEditForm() {
   if (!props.project) return;
-  editForm.category = props.project.category || "";
-  editForm.status = props.project.status || "";
-  editForm.note = props.project.note || "";
-  editForm.recommended = Boolean(props.project.recommended);
+  const initial = {
+    category: props.project.category || "",
+    status: props.project.status || "",
+    note: props.project.note || "",
+    recommended: Boolean(props.project.recommended)
+  };
+  Object.assign(editForm, initial);
+  Object.assign(editBaseline, initial);
 }
 
 function startEditing() {
+  editSessionGeneration.value += 1;
   initEditForm();
   editing.value = true;
   editMessage.value = "";
 }
 
 function cancelEditing() {
+  editSessionGeneration.value += 1;
   editing.value = false;
   editMessage.value = "";
 }
@@ -255,25 +281,39 @@ function closeDrawer() {
 }
 
 async function saveEditing() {
-  if (!props.project) return;
-  saving.value = true;
+  if (!props.project || saving.value) return;
+  const projectId = props.project.id;
+  const requestEditSession = editSessionGeneration.value;
   editMessage.value = "";
+  const patch = {};
+  for (const field of ["category", "status", "note", "recommended"]) {
+    if (editForm[field] !== editBaseline[field]) patch[field] = editForm[field];
+  }
+  const queued = queueProjectUpdate(projectId, patch);
+  drawerPendingMutations.set(projectId, requestEditSession);
+  const editSessionIsCurrent = () =>
+    editSessionGeneration.value === requestEditSession &&
+    props.project?.id === projectId;
 
   try {
-    const updated = await updateProject(props.project.id, {
-      ...props.project,
-      category: editForm.category,
-      status: editForm.status,
-      note: editForm.note,
-      recommended: editForm.recommended
-    });
-    emit("saved", updated);
-    editing.value = false;
-    editMessage.value = t("drawer.saveSuccess");
+    const updated = await queued.promise;
+    if (isLatestProjectMutation(projectId, queued.token)) {
+      // The parent owns authenticated global state. A closed or replaced edit
+      // session must not discard a mutation that the authenticated queue accepted.
+      emit("saved", updated);
+    }
+    if (editSessionIsCurrent() && isLatestProjectMutation(projectId, queued.token)) {
+      editing.value = false;
+      editMessage.value = t("drawer.saveSuccess");
+    }
   } catch (error) {
-    editMessage.value = error.message || t("drawer.saveFailed");
+    if (editSessionIsCurrent() && isLatestProjectMutation(projectId, queued.token)) {
+      editMessage.value = error.message || t("drawer.saveFailed");
+    }
   } finally {
-    saving.value = false;
+    if (drawerPendingMutations.get(projectId) === requestEditSession) {
+      drawerPendingMutations.delete(projectId);
+    }
   }
 }
 
@@ -340,11 +380,16 @@ const headerLinks = computed(() => {
   }
 
   return [
-    props.project.github ? { href: props.project.github, label: tabCopy.value.github } : null,
-    props.project.github && props.project.latestReleaseAt ? { href: buildReleaseUrl(props.project.github), label: tabCopy.value.release } : null,
-    props.project.demo ? { href: props.project.demo, label: tabCopy.value.demo } : null,
-    props.project.docs ? { href: props.project.docs, label: tabCopy.value.docs } : null
-  ].filter(Boolean);
+    { href: safeExternalHref(props.project.github), label: tabCopy.value.github },
+    { href: props.project.latestReleaseAt ? buildReleaseUrl(props.project.github) : "", label: tabCopy.value.release },
+    { href: safeExternalHref(props.project.demo), label: tabCopy.value.demo },
+    { href: safeExternalHref(props.project.docs), label: tabCopy.value.docs }
+  ].filter(item => item.href);
+});
+
+const readmeHref = computed(() => {
+  const github = safeExternalHref(props.project?.github);
+  return github ? `${github.replace(/#.*$/, "")}#readme` : "";
 });
 
 const tabItems = computed(() => {
@@ -452,6 +497,7 @@ function syncBodyScrollLock() {
 watch(
   () => props.project?.id,
   async () => {
+    editSessionGeneration.value += 1;
     activeTab.value = props.project?.readme ? "readme" : "overview";
     editing.value = false;
     editMessage.value = "";
@@ -499,7 +545,8 @@ onBeforeUnmount(() => {
 });
 
 function buildReleaseUrl(githubUrl) {
-  return `${String(githubUrl).replace(/\/$/, "")}/releases`;
+  const safeGithubUrl = safeExternalHref(githubUrl);
+  return safeGithubUrl ? `${safeGithubUrl.replace(/\/$/, "")}/releases` : "";
 }
 
 function escapeHtml(value) {
@@ -513,11 +560,21 @@ function escapeHtml(value) {
 
 function renderInlineMarkdown(text) {
   let html = escapeHtml(text);
-  html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" />');
+  html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, (_match, alt, href) => {
+    const safeHref = safeExternalHref(href.replaceAll("&amp;", "&"));
+    return safeHref
+      ? `<img src="${escapeHtml(safeHref)}" alt="${alt}" loading="lazy" />`
+      : alt;
+  });
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_match, label, href) => {
+    const safeHref = safeExternalHref(href.replaceAll("&amp;", "&"));
+    return safeHref
+      ? `<a href="${escapeHtml(safeHref)}" target="_blank" rel="noreferrer">${label}</a>`
+      : label;
+  });
   return html;
 }
 

@@ -140,6 +140,14 @@ BACKEND_BASE_URL="http://localhost:3000"
 GITHUB_API_BASE_URL="https://api.github.com"
 GITHUB_CLIENT_ID=""
 GITHUB_CLIENT_SECRET=""
+GITHUB_TOKEN_ENCRYPTION_KEY="<base64-encoded 32-byte key>"
+SESSION_TTL_DAYS="7"
+SESSION_COOKIE_SAME_SITE="lax"
+# SESSION_COOKIE_SECURE="true"
+TRUST_PROXY="false"
+OAUTH_LOGIN_RATE_LIMIT_MAX="10"
+OAUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS="60"
+OAUTH_STATE_MAX_ACTIVE="10000"
 
 OPENAI_API_KEY=""
 OPENAI_API_BASE_URL="https://api.openai.com/v1"
@@ -149,13 +157,50 @@ AI_CLASSIFICATION_MAX_PER_RUN="25"
 AI_CLASSIFICATION_INCLUDE_README="false"
 ```
 
+`GITHUB_TOKEN_ENCRYPTION_KEY` 必须是独立生成、严格 base64 编码的 32 字节密钥；
+生产环境缺失时后端会拒绝启动。本地和测试环境可在不涉及 GitHub token 的流程中
+不配置该密钥，但 OAuth 登录、历史明文 token 迁移和任何 token 持久化都会安全失败，
+不会降级为明文写入。生产环境默认启用 Secure cookie；无论 SameSite 使用 `lax`
+还是 `none`，只要生产 `.env` 显式写入 `SESSION_COOKIE_SECURE=false`，后端都会拒绝
+启动。本地非生产 HTTP 在未设置该变量时会自动保持关闭。
+认证加固迁移会清空旧会话和旧明文 GitHub token，因此升级后所有用户需要重新登录。
+浏览器从 `/auth/me` 读取 `csrfToken` 后只应保存在内存，并在所有
+POST/PUT/PATCH/DELETE 请求的 `X-CSRF-Token` 请求头中发送。校验失败会返回稳定的
+`code: "CSRF_INVALID"`。
+
+### Cookie、CORS 与 HTTPS 部署
+
+同站部署（例如 HTTPS 的 `app.example.com` 与 `api.example.com`，或本地不同端口）
+使用默认 `SESSION_COOKIE_SAME_SITE=lax`。真正跨站的前后端（例如 `pages.dev` 前端与
+另一个站点的 API）必须同时满足：
+
+- 前后端都使用 HTTPS；
+- 后端设置 `SESSION_COOKIE_SAME_SITE=none`，此模式会强制 Session cookie 带
+  `Secure`；
+- `CLIENT_ORIGIN` 只填写一个精确前端 origin（协议、域名和端口），不能写逗号列表；
+- `APP_BASE_URL` 可带前端路径，但其 origin 必须与 `CLIENT_ORIGIN` 相同；
+- 浏览器请求必须携带 credentials。后端 CORS 只回显精确匹配的 `CLIENT_ORIGIN`，
+  并允许 `X-CSRF-Token`。
+
+GitHub OAuth state cookie 始终保持 `SameSite=Lax`，因为 GitHub callback 是顶层导航；
+不要把它改成 `None`。`/auth/github/login` 默认按客户端 IP 每进程每分钟允许 10 次，
+超限返回 `429`。只有后端确实位于反向代理之后才配置 `TRUST_PROXY`，且只能列出最多
+16 个明确的代理 IP/CIDR（例如 `127.0.0.1/8,::1/128`），绝不能使用 `true`；否则
+攻击者可伪造 `X-Forwarded-For` 绕过限流。多实例部署时入口限流是每实例的，需在网关
+再加一层共享限流；OAuth 活跃 state 上限则由数据库原子约束，默认全局 10000 条，
+过期清理按 30 秒间隔、每批 100 条执行，避免每次登录触发全表删除。
+
 ### 3. 初始化数据库
 
 ```bash
 cd backend
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 ```
+
+已有 SQLite 数据库升级前请先按
+[`backend/prisma/MIGRATION.md`](backend/prisma/MIGRATION.md) 完成备份、PRAGMA
+核验和决策矩阵判定；持久化数据库不要再使用 `prisma db push`。
 
 ### 4. 启动后端
 

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { PublicHttpError } from "../lib/publicHttpError.js";
 
 const DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../data/rules");
 const cache = new Map();
@@ -29,7 +30,8 @@ function loadRules(userId) {
     const rules = JSON.parse(raw);
     cache.set(key, rules);
     return rules;
-  } catch {
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
     cache.set(key, []);
     return [];
   }
@@ -57,6 +59,9 @@ export function listRules(userId) {
 }
 
 export function createRule(userId, input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new PublicHttpError("INVALID_RULE", 400, "Rule body must be an object.");
+  }
   const rules = loadRules(userId);
   const rule = {
     id: Date.now(),
@@ -68,38 +73,42 @@ export function createRule(userId, input) {
   };
 
   if (!rule.matchValue || !rule.targetCategory) {
-    throw new Error("matchValue and targetCategory are required.");
+    throw new PublicHttpError("INVALID_RULE", 400, "matchValue and targetCategory are required.");
   }
 
   if (!["topic", "keyword", "language"].includes(rule.matchType)) {
-    throw new Error('matchType must be "topic", "keyword", or "language".');
+    throw new PublicHttpError("INVALID_RULE", 400, 'matchType must be "topic", "keyword", or "language".');
   }
 
-  rules.push(rule);
-  saveRules(userId, rules);
+  saveRules(userId, [...rules, rule]);
   return rule;
 }
 
 export function updateRule(userId, ruleId, input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new PublicHttpError("INVALID_RULE", 400, "Rule body must be an object.");
+  }
   const rules = loadRules(userId);
   const index = rules.findIndex(r => r.id === Number(ruleId));
 
   if (index === -1) {
-    throw new Error("Rule not found.");
+    throw new PublicHttpError("RULE_NOT_FOUND", 404, "Rule not found.");
   }
 
-  if (input.matchValue !== undefined) rules[index].matchValue = String(input.matchValue).trim().toLowerCase();
-  if (input.targetCategory !== undefined) rules[index].targetCategory = input.targetCategory;
+  const updatedRules = rules.map(rule => ({ ...rule }));
+
+  if (input.matchValue !== undefined) updatedRules[index].matchValue = String(input.matchValue).trim().toLowerCase();
+  if (input.targetCategory !== undefined) updatedRules[index].targetCategory = input.targetCategory;
   if (input.matchType !== undefined) {
     if (!["topic", "keyword", "language"].includes(input.matchType)) {
-      throw new Error('matchType must be "topic", "keyword", or "language".');
+      throw new PublicHttpError("INVALID_RULE", 400, 'matchType must be "topic", "keyword", or "language".');
     }
-    rules[index].matchType = input.matchType;
+    updatedRules[index].matchType = input.matchType;
   }
-  if (input.priority !== undefined) rules[index].priority = input.priority;
+  if (input.priority !== undefined) updatedRules[index].priority = input.priority;
 
-  saveRules(userId, rules);
-  return rules[index];
+  saveRules(userId, updatedRules);
+  return updatedRules[index];
 }
 
 export function deleteRule(userId, ruleId) {
@@ -107,11 +116,10 @@ export function deleteRule(userId, ruleId) {
   const index = rules.findIndex(r => r.id === Number(ruleId));
 
   if (index === -1) {
-    throw new Error("Rule not found.");
+    throw new PublicHttpError("RULE_NOT_FOUND", 404, "Rule not found.");
   }
 
-  rules.splice(index, 1);
-  saveRules(userId, rules);
+  saveRules(userId, rules.filter((_, ruleIndex) => ruleIndex !== index));
   return true;
 }
 

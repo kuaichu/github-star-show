@@ -1,4 +1,5 @@
 * text=auto
+.gitattributes text eol=lf
 *.sh text eol=lf
 *.js text eol=lf
 *.json text eol=lf
@@ -6,3 +7,4 @@
 *.vue text eol=lf
 *.css text eol=lf
 *.prisma text eol=lf
+backend/prisma/migrations/**/*.sql text eol=lf

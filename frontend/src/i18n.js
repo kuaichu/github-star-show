@@ -33,6 +33,17 @@ const messages = {
       loginButton: "使用 GitHub 登录",
       adminButton: "打开后台"
     },
+    initialization: {
+      backendTitle: "无法连接后端",
+      backendMessage: "请确认后端服务和前端 API 地址可用，然后重试。",
+      authTitle: "无法确认登录状态",
+      authMessage: "登录状态请求失败。请重试，不会将错误状态当作访客登录。",
+      metaTitle: "无法加载项目配置",
+      metaMessage: "分类和状态配置加载失败。请重试。",
+      projectsTitle: "无法加载项目库",
+      projectsMessage: "你的项目数据加载失败。请重试。",
+      retry: "重试"
+    },
     signedIn: {
       eyebrow: "已登录",
       welcome: "欢迎，{name}",
@@ -46,6 +57,7 @@ const messages = {
       moreActions: "更多操作",
       openAdmin: "打开后台",
       logout: "退出登录",
+      logoutFailed: "退出失败。请检查连接后重试。",
       aiButtonPending: "AI 分类 {count} 个待处理项目",
       aiButtonRerun: "重新执行 AI 分类"
     },
@@ -75,7 +87,16 @@ const messages = {
     sync: {
       aiDisabled: "规则分类已启用。AI 分类是可选增强，目前处于关闭状态。",
       aiEnabled: "规则分类仍然是默认路径。AI 已分类 {classified} 个项目，还有 {pending} 个项目目前只依赖规则。",
+      aiConfigLoading: "正在加载 AI 分类配置...",
+      aiConfigError: "AI 分类配置加载失败。请重试。",
+      aiConfigUnavailable: "AI 分类配置当前不可用。",
+      retryAiConfig: "重试 AI 配置",
       neverSynced: "你还没有同步过 GitHub Stars。",
+      statusLoading: "正在加载同步状态...",
+      statusError: "同步状态加载失败。请重试，或从更多操作中明确选择同步模式。",
+      statusUnavailable: "同步状态当前不可用。请明确选择全量或增量同步。",
+      statusUnavailableShort: "同步状态不可用",
+      retryStatus: "重试同步状态",
       lastSync: "上次 GitHub Star 同步时间：{time}。后续同步默认会走增量模式。",
       fullDone: "全量同步完成。已同步 {total} 个星标仓库。",
       incrementalDone: "增量同步完成。已同步 {total} 个星标仓库。",
@@ -88,6 +109,9 @@ const messages = {
       aiUnavailable: "AI 分类尚未配置。请在后端环境变量中设置 OPENAI_API_KEY 并启用 AI_CLASSIFICATION_ENABLED。",
       remoteRecheckDone: "远端状态检查完成。刷新了 {updated} 个项目。",
       removedVisibleDone: "已从本地项目库移除 {count} 个项目。",
+      removedVisibleResult: "批量移除完成：成功 {success} 个，失败 {failed} 个。",
+      removedRetryResult: "重试移除完成：成功 {success} 个，失败 {failed} 个，跳过 {skipped} 个。",
+      refreshFailed: "服务端结果刷新失败，请重试。",
       batchRemoveConfirm: "要从本地项目库中移除当前筛选出的 {count} 个项目吗？"
     },
     remoteOps: {
@@ -96,7 +120,10 @@ const messages = {
       recheck: "重新检查当前项目",
       rechecking: "检查中...",
       remove: "从本地移除当前项目",
-      removing: "移除中..."
+      removing: "移除中...",
+      failedSelection: "上次批量删除有 {count} 个失败项目仍被选中。",
+      retryFailed: "重试删除失败项目",
+      retryingFailed: "重试删除中..."
     },
     triage: {
       title: "未分类整理视图",
@@ -115,10 +142,14 @@ const messages = {
       savedResearch: "已标记为待研究",
       saveFailed: "快速整理失败",
       batchDone: "已批量归类 {count} 个项目",
-      batchResearchDone: "已批量标记 {count} 个项目为待研究"
+      batchResearchDone: "已批量标记 {count} 个项目为待研究",
+      batchResult: "批处理完成：成功 {success} 个，失败 {failed} 个，跳过 {skipped} 个。"
     },
     batch: {
-      selected: "已选 {count} 项"
+      selected: "已选 {count} 项",
+      selectCurrentPage: "选择当前页项目",
+      selectFiltered: "选择全部 {count} 个筛选结果",
+      clearFiltered: "取消选择全部 {count} 个筛选结果"
     },
     stats: {
       total: "项目总数",
@@ -166,6 +197,7 @@ const messages = {
       cancel: "取消",
       saveSuccess: "项目已更新。",
       saveFailed: "保存失败",
+      loadFailed: "项目详情加载失败，请重试。",
       latestRelease: "最新 Release",
       latestCommit: "最近提交",
       fields: {
@@ -307,6 +339,17 @@ const messages = {
       loginButton: "Login with GitHub",
       adminButton: "Open Admin"
     },
+    initialization: {
+      backendTitle: "Backend unavailable",
+      backendMessage: "Check the backend service and frontend API URLs, then retry.",
+      authTitle: "Unable to verify sign-in",
+      authMessage: "The sign-in status request failed. Retry instead of continuing as a guest.",
+      metaTitle: "Project settings unavailable",
+      metaMessage: "Categories and status settings could not be loaded. Retry the request.",
+      projectsTitle: "Project library unavailable",
+      projectsMessage: "Your project data could not be loaded. Retry the request.",
+      retry: "Retry"
+    },
     signedIn: {
       eyebrow: "Signed In",
       welcome: "Welcome, {name}",
@@ -320,6 +363,7 @@ const messages = {
       moreActions: "More Actions",
       openAdmin: "Open Admin",
       logout: "Logout",
+      logoutFailed: "Logout failed. Check the connection and retry.",
       aiButtonPending: "Classify {count} Pending Projects",
       aiButtonRerun: "Re-run AI Classification"
     },
@@ -349,7 +393,16 @@ const messages = {
     sync: {
       aiDisabled: "Rule-based categories are active. AI classification is optional and currently disabled.",
       aiEnabled: "Rule-based categories remain the default path. AI has classified {classified} projects and {pending} still rely on rules only.",
+      aiConfigLoading: "Loading AI classification configuration...",
+      aiConfigError: "AI classification configuration failed to load. Retry.",
+      aiConfigUnavailable: "AI classification configuration is unavailable.",
+      retryAiConfig: "Retry AI config",
       neverSynced: "You have not synced your GitHub Stars yet.",
+      statusLoading: "Loading sync status...",
+      statusError: "Sync status failed to load. Retry, or explicitly choose a sync mode from More Actions.",
+      statusUnavailable: "Sync status is unavailable. Explicitly choose a full or incremental sync.",
+      statusUnavailableShort: "Sync status unavailable",
+      retryStatus: "Retry sync status",
       lastSync: "Last GitHub Star sync: {time}. Future syncs will default to incremental mode.",
       fullDone: "Full sync completed. Synced {total} starred repositories.",
       incrementalDone: "Incremental sync completed. Synced {total} starred repositories.",
@@ -362,6 +415,9 @@ const messages = {
       aiUnavailable: "AI classification is not configured yet. Set OPENAI_API_KEY and enable AI_CLASSIFICATION_ENABLED in the backend env.",
       remoteRecheckDone: "Remote status recheck completed. Refreshed {updated} projects.",
       removedVisibleDone: "Removed {count} projects from your local library.",
+      removedVisibleResult: "Batch removal complete: {success} succeeded, {failed} failed.",
+      removedRetryResult: "Delete retry complete: {success} succeeded, {failed} failed, {skipped} skipped.",
+      refreshFailed: "The server result could not be refreshed. Retry the request.",
       batchRemoveConfirm: "Remove {count} currently filtered projects from your local library?"
     },
     remoteOps: {
@@ -370,7 +426,10 @@ const messages = {
       recheck: "Recheck Visible Issues",
       rechecking: "Rechecking...",
       remove: "Remove Visible From Local",
-      removing: "Removing..."
+      removing: "Removing...",
+      failedSelection: "{count} projects from the last batch delete remain selected after failing.",
+      retryFailed: "Retry Failed Deletes",
+      retryingFailed: "Retrying Deletes..."
     },
     triage: {
       title: "Uncategorized Triage View",
@@ -389,10 +448,14 @@ const messages = {
       savedResearch: "Marked as To Research",
       saveFailed: "Quick triage failed",
       batchDone: "Batch categorized {count} projects",
-      batchResearchDone: "Batch marked {count} projects as To Research"
+      batchResearchDone: "Batch marked {count} projects as To Research",
+      batchResult: "Batch complete: {success} succeeded, {failed} failed, {skipped} skipped."
     },
     batch: {
-      selected: "{count} selected"
+      selected: "{count} selected",
+      selectCurrentPage: "Select projects on this page",
+      selectFiltered: "Select all {count} filtered results",
+      clearFiltered: "Clear all {count} filtered results"
     },
     stats: {
       total: "Total Projects",
@@ -440,6 +503,7 @@ const messages = {
       cancel: "Cancel",
       saveSuccess: "Project updated.",
       saveFailed: "Save failed",
+      loadFailed: "Project details failed to load. Retry.",
       latestRelease: "Latest Release",
       latestCommit: "Latest Commit",
       fields: {

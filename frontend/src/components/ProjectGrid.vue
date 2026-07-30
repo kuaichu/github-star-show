@@ -15,9 +15,10 @@
               <input
                 :id="`select-${item.id}`"
                 class="card-checkbox"
-                type="checkbox"
-                :checked="selectedIds.has(item.id)"
-                @change="toggleSelect(item.id)"
+                 type="checkbox"
+                 :checked="selectedIds.has(item.id)"
+                 :disabled="batchBusy"
+                 @change="toggleSelect(item.id)"
               />
             </div>
             <div class="chip-row">
@@ -62,7 +63,7 @@
                 :key="`${item.id}-${category}`"
                 class="triage-chip"
                 type="button"
-                :disabled="triageSavingId === item.id"
+                :disabled="triageSavingId === item.id || batchBusy || busyProjectIds.has(item.id)"
                 @click="handleQuickCategory(item.id, category)"
               >
                 {{ translateCategory(category) }}
@@ -70,7 +71,7 @@
               <button
                 class="triage-chip triage-chip-muted"
                 type="button"
-                :disabled="triageSavingId === item.id"
+                :disabled="triageSavingId === item.id || batchBusy || busyProjectIds.has(item.id)"
                 @click="handleMarkResearch(item.id)"
               >
                 {{ triageSavingId === item.id ? t("triage.saving") : t("triage.markResearch") }}
@@ -85,7 +86,14 @@
 
         <div class="card-actions">
           <button class="ghost-button" type="button" @click="$emit('detail', item.id)">{{ t("projects.details") }}</button>
-          <a class="button" :href="item.github" target="_blank" rel="noreferrer">{{ t("projects.openGithub") }}</a>
+          <a
+            v-if="safeExternalHref(item.github)"
+            class="button"
+            :href="safeExternalHref(item.github)"
+            target="_blank"
+            rel="noreferrer"
+          >{{ t("projects.openGithub") }}</a>
+          <span v-else class="button button-disabled" aria-disabled="true">{{ t("projects.openGithub") }}</span>
         </div>
       </article>
     </TransitionGroup>
@@ -101,6 +109,7 @@
 import { ref, onMounted, nextTick } from "vue";
 import EmptyState from "./EmptyState.vue";
 import { t, translateCategory, translateRemoteStatus, translateStatus } from "../i18n";
+import { safeExternalHref } from "../lib/externalUrl";
 
 const animate = ref(false);
 
@@ -137,6 +146,8 @@ const props = defineProps({
   showTriage: { type: Boolean, default: false },
   triageCategories: { type: Array, default: () => [] },
   triageSavingId: { type: Number, default: null },
+  batchBusy: { type: Boolean, default: false },
+  busyProjectIds: { type: Set, default: () => new Set() },
   selectedIds: { type: Set, default: () => new Set() },
   formatDate: { type: Function, required: true },
   formatNumber: { type: Function, required: true }
@@ -145,6 +156,7 @@ const props = defineProps({
 const emit = defineEmits(["detail", "quick-category", "mark-research", "update:selectedIds"]);
 
 function toggleSelect(id) {
+  if (props.batchBusy) return;
   const next = new Set(props.selectedIds);
   if (next.has(id)) {
     next.delete(id);
@@ -155,10 +167,12 @@ function toggleSelect(id) {
 }
 
 function handleQuickCategory(id, category) {
+  if (props.batchBusy || props.busyProjectIds.has(id)) return;
   emit("quick-category", { id, category });
 }
 
 function handleMarkResearch(id) {
+  if (props.batchBusy || props.busyProjectIds.has(id)) return;
   emit("mark-research", id);
 }
 </script>

@@ -1,77 +1,117 @@
-import { Router } from "express";
+import { createAsyncRouter } from "../lib/asyncHandler.js";
 import { getSessionUser } from "../lib/sessionStore.js";
-import { fetchRepository } from "../services/githubService.js";
+import { fetchRepository, isPublicGithubRepository, parseGithubRepositoryUrl } from "../services/githubService.js";
 import { classifyRepositoryDetailed, CATEGORY_SOURCE } from "../services/classificationService.js";
-import { createProject, listProjects, updateProject } from "../services/projectService.js";
-import { saveUserProject } from "../services/userProjectService.js";
+import { upsertProjectForUser } from "../services/projectWriteService.js";
+import { pickUserEditableProjectFields } from "../services/userProjectService.js";
+import { trySendPublicHttpError } from "../lib/publicHttpError.js";
+import { PublicHttpError } from "../lib/publicHttpError.js";
+import { setProjectPublicVisibilityByGithub } from "../services/projectService.js";
+import { withOperationLeaseTransaction, withSharedProjectCatalogLease } from "../services/operationLeaseService.js";
 
-const router = Router();
+const router = createAsyncRouter();
+
+function confirmsRepositoryIsNotPublic(error) {
+  return error instanceof PublicHttpError &&
+    (error.code === "REPOSITORY_NOT_FOUND" || error.code === "REPOSITORY_NOT_PUBLIC");
+}
 
 router.post("/import-repo", async (req, res) => {
   try {
     const user = await getSessionUser(req);
-    const repoData = await fetchRepository(req.body.repo);
+    if (!user) {
+      res.status(401).json({ message: "Login required." });
+      return;
+    }
+
+    await withSharedProjectCatalogLease(async (catalogLease, signal) => {
+    const requestBody = req.body || {};
+    const verifiedPublicBefore = new Date();
+    let repoData;
+    try {
+      signal.throwIfAborted();
+      repoData = await fetchRepository(requestBody.repo, user.accessToken);
+    } catch (error) {
+      let canonicalGithub = null;
+      try {
+        const { owner, repo } = parseGithubRepositoryUrl(requestBody.repo);
+        canonicalGithub = `https://github.com/${owner}/${repo}`;
+      } catch {
+        // Invalid input never identifies an existing shared Project.
+      }
+      if (canonicalGithub && confirmsRepositoryIsNotPublic(error)) await withOperationLeaseTransaction(catalogLease, tx =>
+        setProjectPublicVisibilityByGithub(canonicalGithub, false, { client: tx })
+      );
+      throw error;
+    }
+    if (!isPublicGithubRepository(repoData)) {
+      res.status(400).json({ message: "Only public GitHub repositories can be imported." });
+      return;
+    }
     const classification = classifyRepositoryDetailed({
       name: repoData.repo,
       description: repoData.description,
       language: repoData.language,
       tags: repoData.tags
     });
-    const basePayload = {
+    const sharedPayload = {
       name: repoData.repo,
       author: repoData.owner,
-      category: req.body.category || classification.category,
-      categorySource: req.body.category ? "manual" : "rule",
-      status: req.body.status || "收藏备用",
       language: repoData.language || "Unknown",
       stars: repoData.stars,
       updatedAt: repoData.updatedAt,
-      recommended: false,
       description: repoData.description,
-      features: req.body.features || [],
-      tags: repoData.tags,
-      github: repoData.github,
-      demo: repoData.homepage,
-      docs: req.body.docs || "",
-      note: req.body.note || `Imported from GitHub: ${repoData.fullName}`
+      github: repoData.github
     };
-
-    const existingProjects = await listProjects({});
-    const existing = existingProjects.items.find(item =>
-      item.github.toLowerCase() === repoData.github.toLowerCase() ||
-      `${item.author}/${item.name}`.toLowerCase() === repoData.fullName.toLowerCase()
+    const explicitlySubmitted = Object.fromEntries(
+      ["category", "status", "note", "features", "docs"]
+        .filter(field => Object.hasOwn(requestBody, field))
+        .map(field => [field, requestBody[field]])
     );
+    const explicitUpdates = pickUserEditableProjectFields(explicitlySubmitted);
+    if (Object.hasOwn(explicitUpdates, "category")) {
+      explicitUpdates.categorySource = CATEGORY_SOURCE.manual;
+      explicitUpdates.categoryReason = "manual:user-selected";
+    }
+    const createDefaults = {
+      category: classification.category,
+      categorySource: classification.categorySource,
+      categoryReason: classification.categoryReason,
+      status: "收藏备用",
+      recommended: false,
+      features: [],
+      tags: repoData.tags,
+      demo: repoData.homepage,
+      docs: "",
+      note: `Imported from GitHub: ${repoData.fullName}`
+    };
+    const userOverrides = { ...createDefaults, ...explicitUpdates };
+    const userCreateOnlyFields = Object.keys(createDefaults)
+      .filter(field => !Object.hasOwn(explicitUpdates, field));
 
-    const project = existing
-      ? await updateProject(existing.id, {
-          ...basePayload,
-          category: existing.category,
-          categorySource: existing.categorySource || "manual",
-          status: existing.status,
-          recommended: existing.recommended,
-          docs: existing.docs || basePayload.docs,
-          demo: existing.demo || basePayload.demo,
-          note: existing.note || basePayload.note,
-          features: existing.features,
-          tags: existing.tags.length ? existing.tags : basePayload.tags
-        })
-      : await createProject(basePayload);
-
-    const resultProject = user
-      ? await saveUserProject(user, project, {
-          ...basePayload,
-          categorySource: req.body.category ? CATEGORY_SOURCE.manual : classification.categorySource,
-          categoryReason: req.body.category ? "manual:user-selected" : classification.categoryReason
-        })
-      : project;
+    const resultProject = await upsertProjectForUser(user, sharedPayload, userOverrides, {
+      updateShared: true,
+      verifiedPublic: true,
+      verifiedPublicBefore,
+      userCreateOnlyFields,
+      lease: catalogLease
+    });
+    if (!resultProject) {
+      throw new PublicHttpError(
+        "PROJECT_VISIBILITY_CONFLICT",
+        409,
+        "A newer repository visibility check prevented this project update."
+      );
+    }
 
     res.status(201).json({
       imported: repoData,
       project: resultProject,
-      mode: existing ? "updated" : "created"
+      mode: "upserted"
+    });
     });
   } catch (error) {
-    res.status(400).json({ message: error.message || "Unable to import repository" });
+    if (!trySendPublicHttpError(res, error)) throw error;
   }
 });
 

@@ -1,4 +1,3 @@
-import { projects as seedProjects } from "../data/projects.js";
 import { getPrisma } from "../lib/prisma.js";
 
 const legacyStatusMap = {
@@ -8,17 +7,18 @@ const legacyStatusMap = {
   "To Research": "待研究"
 };
 
-const memoryProjects = seedProjects.map(project => ({
-  ...project,
-  features: [...project.features],
-  tags: [...project.tags]
-}));
-
-const quickFilterMap = {
-  recommended: project => project.recommended,
-  deployed: project => project.status === "已部署",
-  using: project => project.status === "正在使用",
-  research: project => project.status === "待研究"
+const sharedProjectSelect = {
+  id: true,
+  name: true,
+  author: true,
+  language: true,
+  stars: true,
+  updatedAt: true,
+  description: true,
+  github: true,
+  latestReleaseAt: true,
+  latestCommitAt: true,
+  activityCheckedAt: true
 };
 
 function normalizeProject(project) {
@@ -36,79 +36,85 @@ function normalizeProject(project) {
   };
 }
 
-async function readProjects() {
-  const prisma = getPrisma();
-
-  if (!prisma) {
-    return memoryProjects;
-  }
+export function normalizeGithubRepositoryUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
 
   try {
-    const projects = await prisma.project.findMany({
-      orderBy: { id: "asc" }
-    });
-
-    if (!projects.length) {
-      return memoryProjects;
-    }
-
-    return projects.map(normalizeProject);
+    const url = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    if (url.hostname.toLowerCase() !== "github.com") return raw;
+    const parts = url.pathname
+      .split("/")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part.replace(/\.git$/i, "").toLowerCase());
+    if (parts.length !== 2 || parts.some(part => !part)) return raw;
+    return `https://github.com/${parts[0]}/${parts[1]}`;
   } catch {
-    return memoryProjects;
+    return raw;
   }
 }
 
-function sanitizePayload(payload) {
-  const features = Array.isArray(payload.features)
-    ? payload.features
-    : String(payload.features || "")
-        .split("\n")
-        .map(item => item.trim())
-        .filter(Boolean);
-
-  const tags = Array.isArray(payload.tags)
-    ? payload.tags
-    : String(payload.tags || "")
-        .split(/[,\n]/)
-        .map(item => item.trim())
-        .filter(Boolean);
+export function toPublicProject(project) {
+  if (!project) return project;
 
   return {
-    name: String(payload.name || "").trim(),
-    author: String(payload.author || "").trim(),
-    category: String(payload.category || "").trim(),
-    categorySource: String(payload.categorySource || "manual").trim() || "manual",
-    status: legacyStatusMap[payload.status] || String(payload.status || "").trim(),
-    language: String(payload.language || "").trim(),
-    stars: Number(payload.stars || 0),
-    updatedAt: String(payload.updatedAt || "").trim(),
-    recommended: Boolean(payload.recommended),
-    description: String(payload.description || "").trim(),
-    features,
-    tags,
-    github: String(payload.github || "").trim(),
-    demo: String(payload.demo || "").trim(),
-    docs: String(payload.docs || "").trim(),
-    note: String(payload.note || "").trim(),
-    aiCategory: payload.aiCategory ? String(payload.aiCategory).trim() : null,
-    aiConfidence: payload.aiConfidence === null || payload.aiConfidence === undefined || payload.aiConfidence === ""
-      ? null
-      : Number(payload.aiConfidence),
-    aiReason: payload.aiReason ? String(payload.aiReason).trim() : "",
-    aiModel: payload.aiModel ? String(payload.aiModel).trim() : "",
-    aiClassifiedAt: payload.aiClassifiedAt ? new Date(payload.aiClassifiedAt) : null,
-    latestReleaseAt: payload.latestReleaseAt !== undefined ? payload.latestReleaseAt ? new Date(payload.latestReleaseAt) : null : null,
-    latestCommitAt: payload.latestCommitAt !== undefined ? payload.latestCommitAt ? new Date(payload.latestCommitAt) : null : null,
-    activityCheckedAt: payload.activityCheckedAt !== undefined ? payload.activityCheckedAt ? new Date(payload.activityCheckedAt) : null : null
+    id: project.id,
+    name: project.name,
+    author: project.author,
+    language: project.language,
+    stars: project.stars,
+    updatedAt: project.updatedAt,
+    description: project.description,
+    github: project.github,
+    latestReleaseAt: project.latestReleaseAt || null,
+    latestCommitAt: project.latestCommitAt || null,
+    activityCheckedAt: project.activityCheckedAt || null
   };
+}
+
+async function readProjects() {
+  const prisma = getPrisma();
+  if (!prisma) throw new Error("Database not available");
+  const projects = await prisma.project.findMany({
+    where: { publicVisible: true },
+    orderBy: { id: "asc" }
+  });
+  return projects.map(normalizeProject);
+}
+
+function sanitizeSharedPayload(payload, { partial = false } = {}) {
+  const stringFields = ["name", "author", "language", "updatedAt", "description", "github"];
+  const dateFields = ["latestReleaseAt", "latestCommitAt", "activityCheckedAt"];
+  const input = {};
+
+  for (const field of stringFields) {
+    if (!partial || payload[field] !== undefined) {
+      input[field] = String(payload[field] || "").trim();
+    }
+  }
+
+  if (input.github !== undefined) {
+    input.github = normalizeGithubRepositoryUrl(input.github);
+  }
+
+  if (!partial || payload.stars !== undefined) {
+    input.stars = Number(payload.stars || 0);
+  }
+
+  for (const field of dateFields) {
+    if (payload[field] !== undefined) {
+      input[field] = payload[field] ? new Date(payload[field]) : null;
+    }
+  }
+
+  return input;
 }
 
 function validateProjectInput(payload) {
   const requiredFields = [
     "name",
     "author",
-    "category",
-    "status",
     "language",
     "github"
   ];
@@ -123,31 +129,20 @@ function validateProjectInput(payload) {
     return "stars must be a non-negative number";
   }
 
-  if (payload.aiConfidence !== null && (!Number.isFinite(payload.aiConfidence) || payload.aiConfidence < 0 || payload.aiConfidence > 1)) {
-    return "aiConfidence must be between 0 and 1";
-  }
-
   return null;
 }
 
 export async function getMeta() {
   const projects = await readProjects();
-  const categories = ["全部项目", ...new Set(projects.map(item => item.category))];
-  const statusOptions = ["全部状态", ...new Set(projects.map(item => item.status))];
+  const categories = ["全部项目"];
+  const statusOptions = ["全部状态", "收藏备用", "待研究", "正在使用", "已部署"];
   const languageOptions = ["全部语言", ...new Set(projects.map(item => item.language))];
-
-  const categoryCounts = categories.reduce((result, category) => {
-    result[category] = category === "全部项目"
-      ? projects.length
-      : projects.filter(item => item.category === category).length;
-    return result;
-  }, {});
 
   return {
     categories,
     statusOptions,
     languageOptions,
-    categoryCounts
+    categoryCounts: { "全部项目": projects.length }
   };
 }
 
@@ -156,16 +151,13 @@ export async function listProjects(filters) {
   const keyword = (filters.keyword || "").trim().toLowerCase();
 
   const items = projects
+    .map(toPublicProject)
     .filter(project => {
-      const matchCategory = !filters.category || filters.category === "全部项目" || project.category === filters.category;
-      const matchStatus = !filters.status || filters.status === "全部状态" || project.status === filters.status;
       const matchLanguage = !filters.language || filters.language === "全部语言" || project.language === filters.language;
-      const searchBase = [project.name, project.author, project.description, project.tags.join(" ")].join(" ").toLowerCase();
+      const searchBase = [project.name, project.author, project.description].join(" ").toLowerCase();
       const matchKeyword = !keyword || searchBase.includes(keyword);
-      const quickFilter = quickFilterMap[filters.quick];
-      const matchQuick = quickFilter ? quickFilter(project) : true;
 
-      return matchCategory && matchStatus && matchLanguage && matchKeyword && matchQuick;
+      return matchLanguage && matchKeyword;
     })
     .sort((a, b) => {
       if (filters.sort === "stars-asc") return a.stars - b.stars;
@@ -176,9 +168,7 @@ export async function listProjects(filters) {
 
   const stats = [
     { label: "项目总数", value: projects.length },
-    { label: "当前筛中", value: items.length },
-    { label: "推荐项目", value: projects.filter(item => item.recommended).length },
-    { label: "已部署或在用", value: projects.filter(item => ["已部署", "正在使用"].includes(item.status)).length }
+    { label: "当前筛中", value: items.length }
   ];
 
   return { items, stats };
@@ -186,169 +176,171 @@ export async function listProjects(filters) {
 
 export async function getProjectById(id) {
   const projects = await readProjects();
-  return projects.find(project => project.id === Number(id)) || null;
+  return toPublicProject(projects.find(project => project.id === Number(id)) || null);
 }
 
 export async function createProject(payload) {
-  const prisma = getPrisma();
-  const input = sanitizePayload(payload);
+  return upsertProjectByGithub(payload, { updateExisting: false });
+}
+
+function buildProjectCreateData(input, visibilityData = {}) {
+  return {
+    ...input,
+    ...visibilityData,
+    category: "未分类 / 待整理",
+    categorySource: "uncategorized",
+    status: "收藏备用",
+    recommended: false,
+    features: "[]",
+    tags: "[]",
+    demo: "",
+    docs: "",
+    note: ""
+  };
+}
+
+async function findProjectsByCanonicalGithub(prisma, canonicalGithub) {
+  const candidates = await prisma.project.findMany({
+    select: { id: true, github: true }
+  });
+
+  return candidates
+    .filter(project => normalizeGithubRepositoryUrl(project.github) === canonicalGithub)
+    .sort((left, right) => left.id - right.id);
+}
+
+export async function upsertProjectByGithub(payload, options = {}) {
+  const prisma = options.client || getPrisma();
+  const input = sanitizeSharedPayload(payload);
   const error = validateProjectInput(input);
 
   if (error) {
     throw new Error(error);
   }
 
-  const projects = await readProjects();
-  const nextId = projects.length ? Math.max(...projects.map(project => project.id)) + 1 : 1;
+  if (!prisma) throw new Error("Database not available");
+  const visibilityData = options.verifiedPublic
+    ? { publicVisible: true, visibilityVerifiedAt: new Date() }
+    : {};
 
-  if (!prisma) {
-    const created = { id: nextId, ...input };
-    memoryProjects.push(created);
-    return created;
+  const canonicalMatches = await findProjectsByCanonicalGithub(prisma, input.github);
+  if (canonicalMatches.length > 1) {
+    const projectIds = canonicalMatches.map(project => project.id).join(",");
+    throw new Error(`Canonical GitHub URL collision for project IDs [${projectIds}]: ${input.github}`);
   }
 
-  const created = await prisma.project.create({
-    data: {
-      id: nextId,
-      ...input,
-      features: JSON.stringify(input.features),
-      tags: JSON.stringify(input.tags)
+  if (canonicalMatches.length === 1) {
+    const existing = canonicalMatches[0];
+    let refreshBeforeRepublishing = false;
+    let visibility = null;
+    if (options.verifiedPublic) {
+      visibility = await prisma.project.findUnique({
+        where: { id: existing.id },
+        select: { publicVisible: true, visibilityVerifiedAt: true }
+      });
+      refreshBeforeRepublishing = !visibility.publicVisible;
     }
+    const activityData = refreshBeforeRepublishing
+      ? { latestReleaseAt: null, latestCommitAt: null, activityCheckedAt: null }
+      : {};
+    const data = options.updateExisting || refreshBeforeRepublishing
+      ? { ...activityData, ...input, ...visibilityData }
+      : { github: input.github, ...visibilityData };
+    if (options.verifiedPublic && options.verifiedPublicBefore instanceof Date) {
+      const result = await prisma.project.updateMany({
+        where: {
+          id: existing.id,
+          OR: [
+            { publicVisible: true },
+            { visibilityVerifiedAt: null },
+            { visibilityVerifiedAt: { lt: options.verifiedPublicBefore } }
+          ]
+        },
+        data
+      });
+      if (result.count === 0) return null;
+    } else {
+      await prisma.project.update({
+        where: { id: existing.id },
+        data,
+        select: { id: true }
+      });
+    }
+    const updated = await prisma.project.findUnique({
+      where: { id: existing.id },
+      select: sharedProjectSelect
+    });
+    return toPublicProject(updated);
+  }
+
+  const created = await prisma.project.upsert({
+    where: { github: input.github },
+    update: options.updateExisting ? { ...input, ...visibilityData } : visibilityData,
+    create: buildProjectCreateData(input, visibilityData),
+    select: sharedProjectSelect
   });
 
-  return normalizeProject(created);
+  return toPublicProject(created);
+}
+
+export async function setProjectPublicVisibilityByGithub(github, publicVisible, options = {}) {
+  const prisma = options.client || getPrisma();
+  if (!prisma) throw new Error("Database not available");
+
+  const canonicalGithub = normalizeGithubRepositoryUrl(github);
+  if (!canonicalGithub) return 0;
+  const matches = await findProjectsByCanonicalGithub(prisma, canonicalGithub);
+  if (!matches.length) return 0;
+
+  const result = await prisma.project.updateMany({
+    where: {
+      id: { in: matches.map(project => project.id) },
+      ...(options.onlyIfAlreadyVisible ? { publicVisible: true } : {})
+    },
+    data: {
+      publicVisible: Boolean(publicVisible),
+      visibilityVerifiedAt: new Date(),
+      ...(!publicVisible ? {
+        latestReleaseAt: null,
+        latestCommitAt: null,
+        activityCheckedAt: null
+      } : {})
+    }
+  });
+  return result.count;
 }
 
 export async function updateProject(id, payload) {
   const prisma = getPrisma();
-  const input = sanitizePayload(payload);
-  const error = validateProjectInput(input);
+  const input = sanitizeSharedPayload(payload, { partial: true });
 
-  if (error) {
-    throw new Error(error);
+  if (input.stars !== undefined && (!Number.isFinite(input.stars) || input.stars < 0)) {
+    throw new Error("stars must be a non-negative number");
   }
 
-  if (!prisma) {
-    const index = memoryProjects.findIndex(project => project.id === Number(id));
-
-    if (index === -1) {
-      return null;
-    }
-
-    const existing = normalizeProject(memoryProjects[index]);
-    memoryProjects[index] = {
-      id: Number(id),
-      ...input,
-      aiCategory: payload.aiCategory !== undefined ? input.aiCategory : existing.aiCategory,
-      aiConfidence: payload.aiConfidence !== undefined ? input.aiConfidence : existing.aiConfidence,
-      aiReason: payload.aiReason !== undefined ? input.aiReason : existing.aiReason,
-      aiModel: payload.aiModel !== undefined ? input.aiModel : existing.aiModel,
-      aiClassifiedAt: payload.aiClassifiedAt !== undefined ? input.aiClassifiedAt : existing.aiClassifiedAt,
-      categorySource: payload.categorySource !== undefined ? input.categorySource : "manual",
-      latestReleaseAt: payload.latestReleaseAt !== undefined ? input.latestReleaseAt : existing.latestReleaseAt,
-      latestCommitAt: payload.latestCommitAt !== undefined ? input.latestCommitAt : existing.latestCommitAt,
-      activityCheckedAt: payload.activityCheckedAt !== undefined ? input.activityCheckedAt : existing.activityCheckedAt
-    };
-
-    return memoryProjects[index];
-  }
+  if (!prisma) throw new Error("Database not available");
 
   try {
-    const existing = await prisma.project.findUnique({
-      where: { id: Number(id) }
-    });
-
-    if (!existing) {
-      return null;
-    }
-
     const updated = await prisma.project.update({
       where: { id: Number(id) },
-      data: {
-        ...input,
-        categorySource: payload.categorySource !== undefined ? input.categorySource : "manual",
-        aiCategory: payload.aiCategory !== undefined ? input.aiCategory : existing.aiCategory,
-        aiConfidence: payload.aiConfidence !== undefined ? input.aiConfidence : existing.aiConfidence,
-        aiReason: payload.aiReason !== undefined ? input.aiReason : existing.aiReason,
-        aiModel: payload.aiModel !== undefined ? input.aiModel : existing.aiModel,
-        aiClassifiedAt: payload.aiClassifiedAt !== undefined ? input.aiClassifiedAt : existing.aiClassifiedAt,
-        latestReleaseAt: payload.latestReleaseAt !== undefined ? input.latestReleaseAt : existing.latestReleaseAt,
-        latestCommitAt: payload.latestCommitAt !== undefined ? input.latestCommitAt : existing.latestCommitAt,
-        activityCheckedAt: payload.activityCheckedAt !== undefined ? input.activityCheckedAt : existing.activityCheckedAt,
-        features: JSON.stringify(input.features),
-        tags: JSON.stringify(input.tags)
-      }
+      data: input
     });
 
-    return normalizeProject(updated);
-  } catch {
-    return null;
+    return toPublicProject(updated);
+  } catch (error) {
+    if (error?.code === "P2025") return null;
+    throw error;
   }
 }
 
-export async function updateProjectAiClassification(id, classification) {
-  const prisma = getPrisma();
-
-  if (!prisma) {
-    const index = memoryProjects.findIndex(project => project.id === Number(id));
-
-    if (index === -1) {
-      return null;
-    }
-
-    memoryProjects[index] = {
-      ...memoryProjects[index],
-      category: classification.category,
-      categorySource: "ai",
-      aiCategory: classification.category,
-      aiConfidence: classification.confidence,
-      aiReason: classification.reason,
-      aiModel: classification.model,
-      aiClassifiedAt: classification.classifiedAt
-    };
-
-    return normalizeProject(memoryProjects[index]);
-  }
-
-  const updated = await prisma.project.update({
-    where: { id: Number(id) },
-    data: {
-      category: classification.category,
-      categorySource: "ai",
-      aiCategory: classification.category,
-      aiConfidence: classification.confidence,
-      aiReason: classification.reason,
-      aiModel: classification.model,
-      aiClassifiedAt: classification.classifiedAt
-    }
-  });
-
-  return normalizeProject(updated);
-}
-
-export async function updateProjectActivity(id, activityData) {
+export async function updateProjectActivity(id, activityData, options = {}) {
   if (!activityData || (!activityData.latestReleaseAt && !activityData.latestCommitAt && !activityData.activityCheckedAt)) {
     return null;
   }
 
-  const prisma = getPrisma();
+  const prisma = options.client || getPrisma();
 
-  if (!prisma) {
-    const index = memoryProjects.findIndex(project => project.id === Number(id));
-
-    if (index === -1) {
-      return null;
-    }
-
-    memoryProjects[index] = {
-      ...memoryProjects[index],
-      latestReleaseAt: activityData.latestReleaseAt || memoryProjects[index].latestReleaseAt || null,
-      latestCommitAt: activityData.latestCommitAt || memoryProjects[index].latestCommitAt || null,
-      activityCheckedAt: activityData.activityCheckedAt || new Date().toISOString()
-    };
-
-    return normalizeProject(memoryProjects[index]);
-  }
+  if (!prisma) throw new Error("Database not available");
 
   try {
     const data = {};
@@ -356,37 +348,14 @@ export async function updateProjectActivity(id, activityData) {
     if (activityData.latestCommitAt !== undefined) data.latestCommitAt = activityData.latestCommitAt instanceof Date ? activityData.latestCommitAt : new Date(activityData.latestCommitAt);
     data.activityCheckedAt = activityData.activityCheckedAt instanceof Date ? activityData.activityCheckedAt : new Date();
 
-    const updated = await prisma.project.update({
-      where: { id: Number(id) },
+    const updated = await prisma.project.updateMany({
+      where: { id: Number(id), publicVisible: true },
       data
     });
 
-    return normalizeProject(updated);
-  } catch {
-    return null;
-  }
-}
-
-export async function deleteProject(id) {
-  const prisma = getPrisma();
-
-  if (!prisma) {
-    const index = memoryProjects.findIndex(project => project.id === Number(id));
-
-    if (index === -1) {
-      return false;
-    }
-
-    memoryProjects.splice(index, 1);
-    return true;
-  }
-
-  try {
-    await prisma.project.delete({
-      where: { id: Number(id) }
-    });
-    return true;
-  } catch {
-    return false;
+    return updated.count > 0;
+  } catch (error) {
+    if (error?.code === "P2025") return null;
+    throw error;
   }
 }
